@@ -15,4 +15,6 @@ import image_processing
 # then maybe a user interface where you can input text, and it outputs the handwriting, or you can choose to input an
 # image of handwriting, and it outputs the text.
 
-image_processing.process_images_in_folder('sample_handwriting','contrast_handwriting')
+# image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting')
+
+image_processing.segment_words('contrast_handwriting/processed_image1.jpeg', 'individual_words', 2000)
