@@ -15,6 +15,10 @@ import image_processing
 # then maybe a user interface where you can input text, and it outputs the handwriting, or you can choose to input an
 # image of handwriting, and it outputs the text.
 
+# I think I need to edit the process images in folder function so that it doesn't use the remove hor lines function
+# and then write all my samples on lineless paper.
+
+
 # image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting')
 
-image_processing.segment_words('contrast_handwriting/processed_image1.jpeg', 'individual_words', 2000)
+image_processing.segment_words('contrast_handwriting/processed_alphabet_a_to_q.jpeg', 'individual_letters', 2000)

@@ -17,18 +17,22 @@ def hor_line_removal(image):
     thresh = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
     # Detect horizontal lines
-    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 2))
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (70, 2))
     detect_horizontal = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
     contours = cv2.findContours(detect_horizontal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours = contours[0] if len(contours) == 2 else contours[1]
 
     for c in contours:
-        cv2.drawContours(image, [c], -1, (255, 255, 255), thickness=4)
-
+        cv2.drawContours(image, [c], -1, (255, 255, 255), thickness=3)
+    # Test
+    plt.imshow(image)
+    plt.show()
     # smooths the resulting image to fill in any holes present in the letters.
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     hor_lines_removed = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
-
+    # Test
+    plt.imshow(hor_lines_removed)
+    plt.show()
     return hor_lines_removed
 
 
