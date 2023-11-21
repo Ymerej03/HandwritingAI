@@ -1,4 +1,6 @@
+import matplotlib.pyplot as plt
 import image_processing
+import cv2
 
 
 # The goal of the project is to be able to take images as input (in my handwriting) and for a machine learning model
@@ -16,9 +18,17 @@ import image_processing
 # image of handwriting, and it outputs the text.
 
 # I think I need to edit the process images in folder function so that it doesn't use the remove hor lines function
-# and then write all my samples on lineless paper.
+# and then write all my samples on plain paper.
+
+# https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_tutorials.html
 
 
-# image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting')
+def main():
+    image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting', True)
 
-image_processing.segment_words('contrast_handwriting/processed_alphabet_a_to_q.jpeg', 'individual_letters', 2000)
+    image_processing.segment_words('contrast_handwriting/processed_alphabet_a_to_q.jpeg', 'individual_letters', 2000)
+
+
+if __name__ == "__main__":
+    main()
+

@@ -7,33 +7,38 @@ import os
 
 def hor_line_removal(image):
     """
-    hor_line_removal() takes in an image (black and white) and then detects and removed the horizontal lines
+    hor_line_removal() takes in an image (black and white) and then detects and removed the horizontal lines,
+    modified from user nathancy, https://stackoverflow.com/a/59977864
     :param image: an ndarray
     :return hor_lines_removed: an nd array, horizontal lines removed
     """
-    # modified from user nathancy, https://stackoverflow.com/a/59977864
 
-    denoised = cv2.fastNlMeansDenoising(image, None, h=5, templateWindowSize=10, searchWindowSize=25)
+    # making sure the input image is greyscale, so it can be passed to the thresholding function
+    if len(image.shape) == 2:
+        grayed = image  # Image is already grayscale
+    else:
+        # Convert the image to grayscale
+        grayed = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    denoised = cv2.fastNlMeansDenoising(grayed, None, h=5, templateWindowSize=10, searchWindowSize=25)
     thresh = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
     # Detect horizontal lines
-    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (70, 2))
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (100, 5))
     detect_horizontal = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
     contours = cv2.findContours(detect_horizontal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours = contours[0] if len(contours) == 2 else contours[1]
 
     for c in contours:
         cv2.drawContours(image, [c], -1, (255, 255, 255), thickness=3)
-    # Test
-    plt.imshow(image)
-    plt.show()
-    # smooths the resulting image to fill in any holes present in the letters.
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    hor_lines_removed = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
-    # Test
-    plt.imshow(hor_lines_removed)
-    plt.show()
-    return hor_lines_removed
+
+    # # smooths the resulting image to fill in any holes present in the letters. the inversion is because it fills in the
+    # # image with white where I need it to fill in the image with black (the handwriting), larger ksize fills in more
+    # inverted = cv2.bitwise_not(image)
+    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
+    # morph = cv2.morphologyEx(inverted, cv2.MORPH_CLOSE, kernel)
+    # hor_lines_removed = cv2.bitwise_not(morph)
+    return image
 
 
 def preprocess_image(path):
@@ -44,6 +49,7 @@ def preprocess_image(path):
     :return: result an ndarray (2 dimensions), the image after the processing has been applied, two colours only
     """
 
+    # Read in the image and convert it to greyscale, so it only has width and height (2D)
     image = cv2.imread(path)
     grayed = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -55,42 +61,37 @@ def preprocess_image(path):
     # correct range (0-255). This is contrast normalisation, highlighting the edges/details (words).
     divided = cv2.divide(denoised, blurred, scale=255)
 
-    # DIFFERENT THRESHOLDING METHODS
-
-    # # sets the image to be in black and white only using Otsu's algorithm/method
-    # # (maximising variance between classes of pixels)
-    # thresh = cv2.threshold(divided, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-
-    # sets the image to be in black and white only using ToZero thresholding
-    thresh = cv2.threshold(divided, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_TOZERO)[1]
+    # sets the image to be in black and white only using Otsu's algorithm/method
+    # based on maximising the variance between classes of pixels
+    thresh = cv2.threshold(divided, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
     # Find contours which are edges/letters and draw them on a blank image to create a mask
     contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
     contour_image = np.zeros_like(thresh)
-    cv2.drawContours(contour_image, contours, -1, 255, 2)
+    cv2.drawContours(contour_image, contours, -1, 255, 3)
 
-    # smooths the resulting image to fill in any holes present in the letters.
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
-    morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    # smooths the resulting image to fill in any holes present in the letters. the inversion is because it fills in the
+    # image with white where I need it to fill in the image with black (the handwriting), larger ksize fills in more
+    inverted = cv2.bitwise_not(thresh)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (6, 6))
+    morph = cv2.morphologyEx(inverted, cv2.MORPH_CLOSE, kernel)
+    morph = cv2.bitwise_not(morph)
 
     # Invert the mask and apply to the morphology result
     inverted_contour_mask = cv2.bitwise_not(contour_image)
     result = cv2.bitwise_and(morph, morph, mask=inverted_contour_mask)
 
-    # # adjusting darkness of text
-    # row, col = result.shape
-    # for i in range(row):
-    #     for j in range(col):
-    #         if 244 > result[i][j] > 100:
-    #             result[i][j] -= 100
-    result[(result > 100) & (result < 245)] -= 100
-    return result
+    # applying a median blur to get rid of all the thin lines/artifacts that get leftover
+    median = cv2.medianBlur(result, 5)
+
+    return median
 
 
-def process_images_in_folder(input_folder, output_folder):
+def process_images_in_folder(input_folder, output_folder, ruled_paper):
     """
     process_images_in_folder() processes all images in a folder and then writes them to the specified folder, if the
     output folder does not exist it creates it.
+    :param ruled_paper: whether the sample handwriting is written on ruled paper, if it is the lines need to be removed
     :param input_folder: relative path to the folder containing images for processing
     :param output_folder: relative path to the destination folder for the processed images
     """
@@ -105,11 +106,17 @@ def process_images_in_folder(input_folder, output_folder):
     for image_file in image_files:
         input_path = os.path.join(input_folder, image_file)
         output_path = os.path.join(output_folder, f'processed_{image_file}')
+        # if the output path already exists (a processed image of the same name) we keep trying new output paths
+        i = 0
+        while os.path.exists(output_path):
+            output_path = os.path.join(output_folder, f'processed{i}_{image_file}')
+            i += 1
 
         processed_image = preprocess_image(input_path)
-        final_processed_image = hor_line_removal(processed_image)
+        if ruled_paper:
+            processed_image = hor_line_removal(processed_image)
         # Save the processed image
-        cv2.imwrite(output_path, final_processed_image)
+        cv2.imwrite(output_path, processed_image)
 
 
 def segment_words(input_path, output_folder, min_contour_area):

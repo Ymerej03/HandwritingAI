@@ -1,11 +1,8 @@
 import cv2
 import os
 import tkinter as tk
-
-import cv2
-import os
-import tkinter as tk
 from PIL import Image, ImageTk  # Import the Image and ImageTk modules from the PIL library
+
 
 class ImageLabeler:
     # chatGPT did this whole function to speed up image classification so i could focus on the image processing and
