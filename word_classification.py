@@ -17,6 +17,7 @@ class ImageLabeler:
         self.label_entry = tk.Entry(root)
         self.label_entry.pack()
         self.label_entry.bind("<Return>", lambda event: self.next_image())
+        self.label_entry.bind("<Delete>", lambda event: self.delete_current_image())
 
         self.next_button = tk.Button(root, text="Next", command=self.next_image)
         self.next_button.pack()
@@ -55,7 +56,7 @@ class ImageLabeler:
         # Get the label entered by the user
         label = self.label_entry.get()
 
-        # Check for delete command
+        # Check for delete command, this is not super necessary as there is a built in delete image process on delete key press
         if label.lower() == "/delete":
             self.delete_current_image()
         else:
@@ -66,17 +67,15 @@ class ImageLabeler:
                 new_image_path = os.path.join(self.image_folder, new_image_name)
 
                 # Handle existing file
-                if os.path.exists(new_image_path):
-                    print(f"Error: File '{new_image_name}' already exists.")
-                    # Skip to the next image without incrementing the index
-                    self.label_entry.delete(0, tk.END)  # Clear the entry
-                    self.load_image()
-                    return
+                i = 0
+                while os.path.exists(new_image_path):
+                    i += 1
+                    new_image_path = os.path.join(self.image_folder, f"{label}_{self.current_index + i}.png")
 
                 try:
                     os.rename(current_image_path, new_image_path)
                 except FileExistsError:
-                    print(f"Error: File '{new_image_name}' already exists.")
+                    print(f"Error: File '{new_image_name}' already exists. Renaming to {new_image_path}")
 
             # Move to the next image
             self.current_index += 1
@@ -99,13 +98,20 @@ class ImageLabeler:
         self.current_index += 1
         self.label_entry.delete(0, tk.END)  # Clear the entry
         self.load_image()
+        # Check if all images are labeled
+        if self.current_index < len(self.image_list):
+            self.load_image()
+        else:
+            # Close the Tkinter window when all images are labeled
+            print("All images labeled!")
+            self.root.destroy()
 
 
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Image Labeler")
 
-    image_folder = "individual_letters"
+    image_folder = "individual_words"
     labeler = ImageLabeler(root, image_folder)
 
     root.mainloop()

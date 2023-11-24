@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import image_processing
+import data_enlargment
 import cv2
 
 
@@ -22,11 +23,18 @@ import cv2
 
 # https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_tutorials.html
 
+# https://www.cs.tau.ac.il/~wolf/papers/CNNNGram.pdf
+
 
 def main():
     image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting', True)
 
-    image_processing.segment_words('contrast_handwriting/processed_alphabet_a_to_q.jpeg', 'individual_letters', 2000)
+    # image_processing.segment_words('contrast_handwriting/processed_image3.jpeg', 'individual_words', 1000, 5000)
+    # image = cv2.imread('sample_handwriting/image1.jpeg')
+    # image_test = image_processing.hor_line_removal(image)
+    # plt.imshow(image_test)
+    # plt.show()
+    # data_enlargment.image_rotator('individual_letters/B')
 
 
 if __name__ == "__main__":
