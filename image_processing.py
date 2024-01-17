@@ -168,3 +168,30 @@ def segment_words(input_path, output_folder, min_contour_area, max_contour_area)
             # Save the individual word image
             output_path = os.path.join(output_folder, f'word_{i}.png')
             cv2.imwrite(output_path, word_image)
+
+
+def line_splitter(image):
+    """
+    line_splitter() works by averaging the horizontal darkness values locating the areas of lowest/0 darkness (white)
+    and setting that to be a line break. similar can be done to separate into words
+    :return:
+    """
+    # pass in a greyscale image as input, for each line sum the brightness and then divide by the number of pixels in
+    # the line to get the average
+    image_copy = image
+    height, width = image.shape[:2]
+    row_avg = np.zeros((1, height))
+    for i in range(height):
+        row_avg[i] = image[height, :] / width
+    row_avg_sorted = np.sort(row_avg)
+    # getting the value of the highest 10% of brightness value
+    cutoff = row_avg_sorted(int(0.9*height))
+    for j in range(height):
+        if row_avg[j] >= cutoff:
+            image_copy[j, :] = 125  # testing with a grey value to see if logic works
+    return image_copy
+
+
+
+def word_splitter():
+    pass

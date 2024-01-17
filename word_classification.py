@@ -111,7 +111,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.title("Image Labeler")
 
-    image_folder = "individual_words"
+    image_folder = "individual_numbers"
     labeler = ImageLabeler(root, image_folder)
 
     root.mainloop()

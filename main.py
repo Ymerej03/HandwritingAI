@@ -27,14 +27,19 @@ import cv2
 
 
 def main():
-    image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting', True)
+    # image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting', True)
 
-    # image_processing.segment_words('contrast_handwriting/processed_image3.jpeg', 'individual_words', 1000, 5000)
+    # image_processing.segment_words('contrast_handwriting/processed0_numbers.jpeg', 'individual_numbers', 200, 5000)
+
     # image = cv2.imread('sample_handwriting/image1.jpeg')
     # image_test = image_processing.hor_line_removal(image)
     # plt.imshow(image_test)
     # plt.show()
     # data_enlargment.image_rotator('individual_letters/B')
+    image = cv2.imread('processed0_alphabet_a_to_q.jpeg')
+    split_image = image_processing.line_splitter(image)
+    plt.imshow(split_image)
+    plt.show()
 
 
 if __name__ == "__main__":
