@@ -97,6 +97,9 @@ def preprocess_image(path, ruled):
     # applying a median blur to get rid of all the thin lines/artifacts that get leftover
     median = cv2.medianBlur(result, 7)
 
+    # leaves a weird black 5 pixel border so cropping it out for now
+    median[5:-5, 5:-5]
+
     return median
 
 
@@ -178,17 +181,32 @@ def line_splitter(image):
     """
     # pass in a greyscale image as input, for each line sum the brightness and then divide by the number of pixels in
     # the line to get the average
-    image_copy = image
-    height, width = image.shape[:2]
-    row_avg = np.zeros((1, height))
+    image_copy = image.copy()
+    if len(image_copy.shape) == 2:
+        pass
+    else:
+        image_copy = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
+
+    height, width = image_copy.shape[:2]
+    print(height)
+    print(width)
+    row_avg = np.zeros(height)
+    # for each line sum the brightness and then divide by the number of pixels in the line to get the average
     for i in range(height):
-        row_avg[i] = image[height, :] / width
+        row_avg[i] = np.sum(image_copy[i, :]) / width
+
+    # sort the array and get the value of the highest 10% of brightness value
     row_avg_sorted = np.sort(row_avg)
-    # getting the value of the highest 10% of brightness value
-    cutoff = row_avg_sorted(int(0.9*height))
+    # cutoff = row_avg_sorted[int(0.7*height)]
+
+    cutoff = 250
+    print(row_avg)
+    # print(row_avg_sorted)
+    # for testing cutoff purposes set the lines deemed to be bright to grey
     for j in range(height):
         if row_avg[j] >= cutoff:
-            image_copy[j, :] = 125  # testing with a grey value to see if logic works
+            pass
+            image_copy[j, :] = 127  # testing with a grey value to see if logic works
     return image_copy
 
 
