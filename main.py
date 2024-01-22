@@ -26,6 +26,12 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 
 # https://www.cs.tau.ac.il/~wolf/papers/CNNNGram.pdf
 
+# https://ciir.cs.umass.edu/pubfiles/mm-27.pdf current guide/paper
+
+# to increase handwriting samples can apply random rotations, crops, and noise/deterioration
+
+# want to apply the original word detection (segment_words) to the separated lines, also potentially want to increase
+# the line height by a few pixels so that ascenders and descenders are not missed
 
 def main():
     image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting', True)

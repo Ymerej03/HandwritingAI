@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import cv2
 import pytesseract
 import os
+from scipy.ndimage import gaussian_filter1d, gaussian_filter, gaussian_laplace
+from scipy.signal import find_peaks
 
 
 def hor_line_removal(image):
@@ -97,8 +99,8 @@ def preprocess_image(path, ruled):
     # applying a median blur to get rid of all the thin lines/artifacts that get leftover
     median = cv2.medianBlur(result, 7)
 
-    # leaves a weird black 5 pixel border so cropping it out for now
-    median[5:-5, 5:-5]
+    # # leaves a weird black 5 pixel border so cropping it out for now
+    # median[5:-5, 5:-5]
 
     return median
 
@@ -175,41 +177,72 @@ def segment_words(input_path, output_folder, min_contour_area, max_contour_area)
 
 def line_splitter(image):
     """
-    line_splitter() works by averaging the horizontal darkness values locating the areas of lowest/0 darkness (white)
-    and setting that to be a line break. similar can be done to separate into words
+    line_splitter() works by averaging the horizontal darkness values, smoothing the projected averages and then
+    locating the areas of maximum brightness,  setting that to be a line break. then it takes the locations of the line
+    breaks and creates new images for each line.
+    :param: image, a grayscale image of handwritten text to split into lines
     :return:
     """
-    # pass in a greyscale image as input, for each line sum the brightness and then divide by the number of pixels in
-    # the line to get the average
-    image_copy = image.copy()
-    if len(image_copy.shape) == 2:
-        pass
-    else:
-        image_copy = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
 
-    height, width = image_copy.shape[:2]
-    print(height)
-    print(width)
-    row_avg = np.zeros(height)
-    # for each line sum the brightness and then divide by the number of pixels in the line to get the average
+    height, width = image.shape[:2]
+    projection = np.zeros(height)
     for i in range(height):
-        row_avg[i] = np.sum(image_copy[i, :]) / width
+        projection[i] = np.average(image[i][:])
 
-    # sort the array and get the value of the highest 10% of brightness value
-    row_avg_sorted = np.sort(row_avg)
-    # cutoff = row_avg_sorted[int(0.7*height)]
+    smoothed_projection = gaussian_filter1d(projection, sigma=16)
 
-    cutoff = 250
-    print(row_avg)
-    # print(row_avg_sorted)
-    # for testing cutoff purposes set the lines deemed to be bright to grey
-    for j in range(height):
-        if row_avg[j] >= cutoff:
-            pass
-            image_copy[j, :] = 127  # testing with a grey value to see if logic works
+    # Find local maxima
+    peaks, _ = find_peaks(smoothed_projection)
+
+    # # for testing, draws lines on the image where the line breaks are detected
+    # image_copy = image.copy()
+    # for j in range(len(peaks)):
+    #     cv2.line(image_copy, (0, peaks[j]), (image_copy.shape[1], peaks[j]), color=(0, 255, 0))
+
+    # Create and save horizontal lines
+    output_folder = 'horizontal_line'
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    for i in range(len(peaks) - 1):
+        line = image[peaks[i]:peaks[i + 1], :]
+        output_path = os.path.join(output_folder, f'line_{i + 1}.jpg')
+        cv2.imwrite(output_path, line)
+
+    return None
+
+
+def word_splitter(line_image):
+    # doesnt appear to be working as well as it needs to to be used
+    """
+        line_splitter() works by averaging the horizontal darkness values, smoothing the projected averages and then
+        locating the areas of maximum brightness,  setting that to be a line break. then it takes the locations of the line
+        breaks and creates new images for each line.
+        :param: image, a grayscale image of handwritten text to split into lines
+        :return:
+        """
+
+    height, width = line_image.shape[:2]
+    projection = np.zeros(width)
+    for i in range(width):
+        projection[i] = np.average(line_image[:, i])
+
+    smoothed_projection = gaussian_filter1d(projection, sigma=49)
+
+    # Find local maxima
+    peaks, _ = find_peaks(smoothed_projection)
+
+    # for testing, draws lines on the image where the line breaks are detected
+    image_copy = line_image.copy()
+    for j in range(len(peaks)):
+        cv2.line(image_copy, (peaks[j], 0), (peaks[j], image_copy.shape[0]), color=(0, 255, 0))
+
+    # # Create and save horizontal lines
+    # output_folder = 'segmented_words'
+    # if not os.path.exists(output_folder):
+    #     os.makedirs(output_folder)
+    # for i in range(len(peaks) - 1):
+    #     line = line_image[:, peaks[i]:peaks[i + 1]]
+    #     output_path = os.path.join(output_folder, f'word_{i + 1}.jpg')
+    #     cv2.imwrite(output_path, line)
+
     return image_copy
-
-
-
-def word_splitter():
-    pass
