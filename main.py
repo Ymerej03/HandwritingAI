@@ -19,36 +19,42 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 # then maybe a user interface where you can input text, and it outputs the handwriting, or you can choose to input an
 # image of handwriting, and it outputs the text.
 
-# I think I need to edit the process images in folder function so that it doesn't use the remove hor lines function
-# and then write all my samples on plain paper.
 
 # https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_tutorials.html
-
 # https://www.cs.tau.ac.il/~wolf/papers/CNNNGram.pdf
 
+# For line separation
 # https://ciir.cs.umass.edu/pubfiles/mm-27.pdf current guide/paper
+
+# For word separation
+# https://sci-hub.se/10.1109/ICDAR.1995.598958
+
+# both?
+# https://maroo.cs.umass.edu/getpdf.php?id=505
+
+# https://pd.daffodilvarsity.edu.bd/course/material/book-430/pdf_content convex hull
+
+# https://sci-hub.se/https://ieeexplore.ieee.org/document/8902434
 
 # to increase handwriting samples can apply random rotations, crops, and noise/deterioration
 
 # want to apply the original word detection (segment_words) to the separated lines, also potentially want to increase
 # the line height by a few pixels so that ascenders and descenders are not missed
 
+# might want to extract words from greyscale images so that it still has the background and it doesnt look off,
+# due to the contrast, could do this by storing the location of the words in the line and then using the position of
+# the line relative to the whole image to then extract the image of the word straight from the original greyscale image
+
+# could modify an existing dataset and include samples of my handwriting in it OR make my own dataset just for my
+# handwriting, trade off of size of datasets vs accuracy on just my handwriting
+# word list for my database https://www.ef.co.nz/english-resources/english-vocabulary/top-1000-words/
+
 def main():
-    image_processing.process_images_in_folder('sample_handwriting', 'contrast_handwriting', True)
-
-    # image_processing.segment_words('contrast_handwriting/processed0_numbers.jpeg', 'individual_numbers', 200, 5000)
-
-    # image = cv2.imread('sample_handwriting/image1.jpeg')
-    # image_test = image_processing.hor_line_removal(image)
-    # plt.imshow(image_test)
-    # plt.show()
-    # data_enlargment.image_rotator('individual_letters/B')
-    # image = cv2.imread('contrast_handwriting/processed1_image1.jpeg')
-    # split_image = image_processing.line_splitter(image)
-    # plt.imshow(split_image, cmap='gray')
-    # plt.show()
+    # image_processing.process_images_in_folder('sample_handwriting','contrast_handwriting',True)
+    # image = cv2.imread('contrast_handwriting/processed0_common_words_a.jpg')
+    # image_processing.line_splitter(image)
+    image_processing.segment_words('horizontal_line/line_9.jpg','individual_words',1000,100000)
 
 
 if __name__ == "__main__":
     main()
-

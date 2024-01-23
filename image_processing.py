@@ -154,8 +154,12 @@ def segment_words(input_path, output_folder, min_contour_area, max_contour_area)
     # Invert the image so that the text is white and the background is black
     inverted = cv2.bitwise_not(gray)
 
+    # Apply dilation to blob the words
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    dilated = cv2.dilate(inverted, kernel, iterations=2)
+
     # Find contours, detects white/light colours hence the need for inversion
-    contours = cv2.findContours(inverted, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+    contours = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
 
     # Create the output folder if it doesn't exist
     if not os.path.exists(output_folder):
@@ -203,15 +207,23 @@ def line_splitter(image):
     output_folder = 'horizontal_line'
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+
     for i in range(len(peaks) - 1):
         line = image[peaks[i]:peaks[i + 1], :]
-        output_path = os.path.join(output_folder, f'line_{i + 1}.jpg')
-        cv2.imwrite(output_path, line)
+        base_filename = f'line_{i + 1}.jpg'
+        output_path = os.path.join(output_folder, base_filename)
 
+        # Check if the file already exists
+        while os.path.exists(output_path):
+            i += 1
+            base_filename = f'line_{i + 1}.jpg'
+            output_path = os.path.join(output_folder, base_filename)
+
+        cv2.imwrite(output_path, line)
     return None
 
 
-def word_splitter(line_image):
+def word_splitter_deprecated(line_image):
     # doesnt appear to be working as well as it needs to to be used
     """
         line_splitter() works by averaging the horizontal darkness values, smoothing the projected averages and then
@@ -246,3 +258,98 @@ def word_splitter(line_image):
     #     cv2.imwrite(output_path, line)
 
     return image_copy
+
+
+def increase_handwriting_size(image, dilation_factor, iterations):
+
+    image_copy = image.copy()
+
+    # Create a kernel for erosion
+    kernel = np.ones((dilation_factor, dilation_factor), np.uint8)
+
+    # erode the binary image
+    dilated_image = cv2.erode(image_copy, kernel, iterations=iterations)
+
+    # Invert the eroded image to get black outlines
+    outlined_image = cv2.bitwise_not(dilated_image)
+
+    return outlined_image
+
+
+def word_splitter(image_path, output_folder):
+    line = cv2.imread(image_path)
+    gray = cv2.cvtColor(line, cv2.COLOR_BGR2GRAY)
+    blob = increase_handwriting_size(gray, 6, 6)
+    # Find contours, detects white/light colours hence the need for inversion
+    contours = cv2.findContours(blob, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        print("Specified output folder does not exist, creating it now...")
+        os.makedirs(output_folder)
+
+    # Extract individual words
+    for i, contour in enumerate(contours):
+        x, y, w, h = cv2.boundingRect(contour)
+        extra = 0
+        # Filter contours that are in specified area range
+        if 10000000 > cv2.contourArea(contour) > 9:
+            word_image = line[y-extra:y + h + extra, x-extra:x + w+extra]
+            image_name = image_path.split('/')[-1].split('.')[0]
+            # Save the individual word image
+            output_path = os.path.join(output_folder, f'{image_name}_word_{i}.png')
+            if word_image.any():
+                cv2.imwrite(output_path, word_image)
+
+
+def blob_detection(line_image):
+    # Ensure the input image is grayscale
+    if len(line_image.shape) > 2:
+        line_image = cv2.cvtColor(line_image, cv2.COLOR_BGR2GRAY)
+    # Define anisotropic standard deviations for x and y axes
+    sigma_x = 4
+    sigma_y = 2
+    # Apply anisotropic Gaussian filter
+    smoothed_image = gaussian_filter(line_image, sigma=(sigma_y, sigma_x))
+
+    # Define the standard deviation for Laplacian of Gaussian
+    sigma_laplace = 1.0
+
+    # Apply Laplacian of Gaussian to the smoothed image
+    result = gaussian_laplace(smoothed_image, sigma=sigma_laplace)
+
+    # Thresholding to highlight blobs
+    _, thresholded_result = cv2.threshold(result, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Optional: Morphological operations for further blob enhancement
+    kernel = np.ones((5, 5), np.uint8)
+    blob_mask = cv2.morphologyEx(thresholded_result, cv2.MORPH_OPEN, kernel)
+
+    # Apply the blob mask to the original image
+    blobby_image = cv2.bitwise_and(line_image, line_image, mask=blob_mask)
+
+    return blobby_image
+
+
+def blur_and_threshold(image, blur_size=(10, 20), threshold=220):
+    """
+    Blur the input image and apply thresholding.
+
+    Parameters:
+    - image: Input image (numpy array).
+    - blur_size: Size of the rectangle for averaging (tuple of two integers).
+
+    Returns:
+    - Resulting image after blurring and thresholding.
+    """
+    # Blur the image using a rectangle of specified size
+    blurred_image = cv2.blur(image, blur_size)
+
+    blurred_image[blurred_image < threshold] = 0
+
+    return blurred_image
+
+
+def extract_words_from_image(image, ruled):
+    # for use once the model is trained
+    pass
