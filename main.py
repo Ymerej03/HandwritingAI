@@ -1,6 +1,4 @@
-import matplotlib.pyplot as plt
 import image_processing
-import data_enlargment
 import cv2
 import pytesseract
 
@@ -51,9 +49,10 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 
 def main():
     # image_processing.process_images_in_folder('sample_handwriting','contrast_handwriting',True)
-    # image = cv2.imread('contrast_handwriting/processed0_common_words_a.jpg')
-    # image_processing.line_splitter(image)
-    image_processing.segment_words('horizontal_line/line_9.jpg','individual_words',1000,100000)
+    image = cv2.imread('contrast_handwriting/processed0_handwriting_online.jpeg')
+    image_processing.line_splitter(image)
+
+    image_processing.segment_words('horizontal_line/line_17.jpg', 'individual_words', 1000, 100000)
 
 
 if __name__ == "__main__":
