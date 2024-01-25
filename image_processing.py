@@ -99,10 +99,10 @@ def preprocess_image(path, ruled):
     # applying a median blur to get rid of all the thin lines/artifacts that get leftover
     median = cv2.medianBlur(result, 7)
 
-    # # leaves a weird black 5 pixel border so cropping it out for now
-    # median[5:-5, 5:-5]
+    # leaves a weird black 5 pixel border so cropping it out
+    crop_image = median[5:-5, 5:-5]
 
-    return median
+    return crop_image
 
 
 def process_images_in_folder(input_folder, output_folder, ruled_paper):
@@ -179,12 +179,13 @@ def segment_words(input_path, output_folder, min_contour_area, max_contour_area)
             cv2.imwrite(output_path, word_image)
 
 
-def line_splitter(image):
+def line_splitter(image, write=False):
     """
     line_splitter() works by averaging the horizontal darkness values, smoothing the projected averages and then
     locating the areas of maximum brightness,  setting that to be a line break. then it takes the locations of the line
     breaks and creates new images for each line.
     :param: image, a grayscale image of handwritten text to split into lines
+    :param: write, boolean, whether to write the lines to a folder
     :return:
     """
 
@@ -202,25 +203,30 @@ def line_splitter(image):
     # image_copy = image.copy()
     # for j in range(len(peaks)):
     #     cv2.line(image_copy, (0, peaks[j]), (image_copy.shape[1], peaks[j]), color=(0, 255, 0))
+    if write:
+        # Create and save horizontal lines
+        output_folder = 'horizontal_line'
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
 
-    # Create and save horizontal lines
-    output_folder = 'horizontal_line'
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    for i in range(len(peaks) - 1):
-        line = image[peaks[i]:peaks[i + 1], :]
-        base_filename = f'line_{i + 1}.jpg'
-        output_path = os.path.join(output_folder, base_filename)
-
-        # Check if the file already exists
-        while os.path.exists(output_path):
-            i += 1
+        for i in range(len(peaks) - 1):
+            line = image[peaks[i]:peaks[i + 1], :]
             base_filename = f'line_{i + 1}.jpg'
             output_path = os.path.join(output_folder, base_filename)
 
-        cv2.imwrite(output_path, line)
-    return None
+            # Check if the file already exists
+            while os.path.exists(output_path):
+                i += 1
+                base_filename = f'line_{i + 1}.jpg'
+                output_path = os.path.join(output_folder, base_filename)
+
+            cv2.imwrite(output_path, line)
+    else:
+        lines = []
+        for i in range(len(peaks) - 1):
+            line = image[peaks[i]:peaks[i + 1], :]
+            lines.append(line)
+        return lines
 
 
 def word_splitter_deprecated(line_image):
@@ -276,32 +282,6 @@ def increase_handwriting_size(image, dilation_factor, iterations):
     return outlined_image
 
 
-def word_splitter(image_path, output_folder):
-    line = cv2.imread(image_path)
-    gray = cv2.cvtColor(line, cv2.COLOR_BGR2GRAY)
-    blob = increase_handwriting_size(gray, 6, 6)
-    # Find contours, detects white/light colours hence the need for inversion
-    contours = cv2.findContours(blob, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
-
-    # Create the output folder if it doesn't exist
-    if not os.path.exists(output_folder):
-        print("Specified output folder does not exist, creating it now...")
-        os.makedirs(output_folder)
-
-    # Extract individual words
-    for i, contour in enumerate(contours):
-        x, y, w, h = cv2.boundingRect(contour)
-        extra = 0
-        # Filter contours that are in specified area range
-        if 10000000 > cv2.contourArea(contour) > 9:
-            word_image = line[y-extra:y + h + extra, x-extra:x + w+extra]
-            image_name = image_path.split('/')[-1].split('.')[0]
-            # Save the individual word image
-            output_path = os.path.join(output_folder, f'{image_name}_word_{i}.png')
-            if word_image.any():
-                cv2.imwrite(output_path, word_image)
-
-
 def blob_detection(line_image):
     # Ensure the input image is grayscale
     if len(line_image.shape) > 2:
@@ -350,6 +330,76 @@ def blur_and_threshold(image, blur_size=(10, 20), threshold=220):
     return blurred_image
 
 
-def extract_words_from_image(image, ruled):
-    # for use once the model is trained
-    pass
+def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_contour=10000000):
+    """
+    splits an image of a line of handwritten text into words based on contours found from blobbing the words.
+    it orders them based on the english left-to-right reading with contours starting with lower x values added first
+
+    :param image: image to split into words, should be greyscale but will be converted if not
+    :param output_folder: the folder you are writing the words/images found to, default None as not writing
+    :param write: whether you are writing the split words to a folder, default is to return list of images not write
+    :param min_contour: minimum size of contour to be considered
+    :param max_contour: maximum size of contour to be considered
+    :return word_image: list of image arrays of the segmented words, only returns if write=False
+    """
+
+    # making sure the input image is greyscale
+    if len(image.shape) == 2:
+        gray = image  # Image is already grayscale
+    else:
+        # Convert the image to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blob = increase_handwriting_size(gray, 6, 6)
+    # Find contours, detects white/light colours hence the need for inversion
+    contours = cv2.findContours(blob, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
+    if write:
+        if output_folder is not None:
+            # Create the output folder if it doesn't exist
+            if not os.path.exists(output_folder):
+                print("Specified output folder does not exist, creating it now...")
+                os.makedirs(output_folder)
+
+            # Extract individual words
+            for i, contour in enumerate(contours):
+                x, y, w, h = cv2.boundingRect(contour)
+                # Filter contours that are in specified area range
+                if max_contour > cv2.contourArea(contour) > min_contour:
+                    word_image = image[y:y + h, x:x + w]
+                    # Save the individual word image
+                    output_path = os.path.join(output_folder, f'{image}_word_{i}.png')
+                    if word_image.any():
+                        cv2.imwrite(output_path, word_image)
+    else:
+        word_image = []
+        # Extract individual words and sort them based on the leftmost point
+        for contour in sorted(contours, key=lambda c: cv2.boundingRect(c)[0]):
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Filter contours that are in specified area range and append to the list of words
+            if max_contour > cv2.contourArea(contour) > min_contour:
+                word_image.append(image[y:y + h, x:x + w])
+
+        return word_image
+
+
+def extract_words_from_image(image_path, ruled):
+    """
+    takes in the path to the image and then splits the image into lines and then those lines into words, it then
+
+    :param image_path: a string, path to a colour image that we want to extract the words from
+    :param ruled: a boolean, whether the paper has horizontal ruled lines
+    :return ordered_words: a list of images following standard english reading, 0=top left word ... x=bottom right word
+    """
+    image = preprocess_image(image_path, ruled)
+    # splits the images into lines, image_lines is a list of those lines where image_lines[0] is the topmost line
+    # image_lines[1] is the line below etc
+    image_lines = line_splitter(image)
+
+    ordered_words = []
+    for i in range(len(image_lines)):
+        words = word_splitter(image_lines[i])
+        for j in range(len(words)):
+            ordered_words.append(words[j])
+        # could append a symbol here to indicate that a newline has started, then use that to split transcriptions up
+        ordered_words.append(np.array([-999]))
+    return ordered_words

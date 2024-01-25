@@ -1,6 +1,7 @@
 import image_processing
 import cv2
 import pytesseract
+import matplotlib.pyplot as plt
 
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
 # The goal of the project is to be able to take images as input (in my handwriting) and for a machine learning model
@@ -39,7 +40,7 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 # want to apply the original word detection (segment_words) to the separated lines, also potentially want to increase
 # the line height by a few pixels so that ascenders and descenders are not missed
 
-# might want to extract words from greyscale images so that it still has the background and it doesnt look off,
+# might want to extract words from greyscale images so that it still has the background, and it doesn't look off,
 # due to the contrast, could do this by storing the location of the words in the line and then using the position of
 # the line relative to the whole image to then extract the image of the word straight from the original greyscale image
 
@@ -48,11 +49,7 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 # word list for my database https://www.ef.co.nz/english-resources/english-vocabulary/top-1000-words/
 
 def main():
-    # image_processing.process_images_in_folder('sample_handwriting','contrast_handwriting',True)
-    image = cv2.imread('contrast_handwriting/processed0_handwriting_online.jpeg')
-    image_processing.line_splitter(image)
-
-    image_processing.segment_words('horizontal_line/line_17.jpg', 'individual_words', 1000, 100000)
+    pass
 
 
 if __name__ == "__main__":
