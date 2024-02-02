@@ -10,8 +10,7 @@ import os
 # the transcription is obtained from the original name of the image split on the _
 
 input_folder = "labelled_images"
-
-output_folder = "jeremy_words_dataset"
+output_folder = "jeremy_words_dataset/jeremy_words"
 
 # Create the output folder if it doesn't exist
 if not os.path.exists(output_folder):
@@ -29,8 +28,11 @@ for i, image_name in enumerate(os.listdir(input_folder)):
     new_image_name = f"z01{os.sep}z01-{a}{os.sep}z01-{a}-{b}-{c}.png"
     output_file_path = os.path.join(output_folder, new_image_name)
 
+    # Create subdirectories if they don't exist
+    os.makedirs(os.path.join(output_folder, f"z01{os.sep}z01-{a}"), exist_ok=True)
+
     # Write to text file
-    with open("jeremy_words.txt", "a") as f:
+    with open(f"{output_folder}/jeremy_words.txt", "a") as f:
         transcription = image_name.split('_')[0]
         f.write(f"{new_image_name.split('.')[0]} ok 99 99 99 99 99 aa {transcription}\n")
 

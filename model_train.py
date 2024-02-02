@@ -21,14 +21,14 @@ import os
 # based on https://github.com/pythonlessons/mltu/tree/main/Tutorials/03_handwriting_recognition and
 # https://www.youtube.com/watch?v=WhRC31SlXzA same code ones more of a guide
 # the code here is almost certainly worse and probably over commented
-dataset_path = "IAM_Words_Dataset/IAM_Words"
-
+dataset_path = "jeremy_words_dataset/jeremy_words"
+dataset_words = "jeremy_words_dataset/jeremy_words.txt"
 dataset = []
 vocab = set()
 max_len = 0
 
 # read in the files according to the IAM organisation adding the images and labels to the model
-with open("IAM_Words_Dataset/words.txt", "r") as text:
+with open(dataset_words, "r") as text:
     line = "not blank"
     while line != "":
         # reads the line first so that when it continues it doesnt get stuck in an infinite loop
