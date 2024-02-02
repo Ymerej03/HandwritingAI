@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-import pytesseract
 import os
 from scipy.ndimage import gaussian_filter1d, gaussian_filter, gaussian_laplace
 from scipy.signal import find_peaks
@@ -99,8 +98,9 @@ def preprocess_image(path, ruled):
     # applying a median blur to get rid of all the thin lines/artifacts that get leftover
     median = cv2.medianBlur(result, 7)
 
-    # leaves a weird black 5 pixel border so cropping it out
-    crop_image = median[5:-5, 5:-5]
+    # leaves a weird black 5 pixel border so cropping it out (only cropping the left and right borders)
+    # this is where it breaks the line splitter function, crop misses the last line, no crop includes it
+    crop_image = median[:, 5:-5]
 
     return crop_image
 
@@ -208,62 +208,27 @@ def line_splitter(image, write=False):
         output_folder = 'horizontal_line'
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
-
+        file_index = 0
         for i in range(len(peaks) - 1):
-            line = image[peaks[i]:peaks[i + 1], :]
+            line = image[peaks[i]-25:peaks[i + 1]+25, :]
             base_filename = f'line_{i + 1}.jpg'
             output_path = os.path.join(output_folder, base_filename)
 
             # Check if the file already exists
             while os.path.exists(output_path):
-                i += 1
-                base_filename = f'line_{i + 1}.jpg'
+                file_index += 1
+                base_filename = f'line_{file_index + 1}.jpg'
                 output_path = os.path.join(output_folder, base_filename)
 
             cv2.imwrite(output_path, line)
     else:
         lines = []
-        for i in range(len(peaks) - 1):
-            line = image[peaks[i]:peaks[i + 1], :]
+        for j in range(len(peaks) - 1):
+            # extends the line up and down x pixels to account for the ascenders and descenders
+            ascend = 0
+            line = image[peaks[j]-ascend:peaks[j + 1]+ascend, :]
             lines.append(line)
         return lines
-
-
-def word_splitter_deprecated(line_image):
-    # doesnt appear to be working as well as it needs to to be used
-    """
-        line_splitter() works by averaging the horizontal darkness values, smoothing the projected averages and then
-        locating the areas of maximum brightness,  setting that to be a line break. then it takes the locations of the line
-        breaks and creates new images for each line.
-        :param: image, a grayscale image of handwritten text to split into lines
-        :return:
-        """
-
-    height, width = line_image.shape[:2]
-    projection = np.zeros(width)
-    for i in range(width):
-        projection[i] = np.average(line_image[:, i])
-
-    smoothed_projection = gaussian_filter1d(projection, sigma=49)
-
-    # Find local maxima
-    peaks, _ = find_peaks(smoothed_projection)
-
-    # for testing, draws lines on the image where the line breaks are detected
-    image_copy = line_image.copy()
-    for j in range(len(peaks)):
-        cv2.line(image_copy, (peaks[j], 0), (peaks[j], image_copy.shape[0]), color=(0, 255, 0))
-
-    # # Create and save horizontal lines
-    # output_folder = 'segmented_words'
-    # if not os.path.exists(output_folder):
-    #     os.makedirs(output_folder)
-    # for i in range(len(peaks) - 1):
-    #     line = line_image[:, peaks[i]:peaks[i + 1]]
-    #     output_path = os.path.join(output_folder, f'word_{i + 1}.jpg')
-    #     cv2.imwrite(output_path, line)
-
-    return image_copy
 
 
 def increase_handwriting_size(image, dilation_factor, iterations):
@@ -311,26 +276,7 @@ def blob_detection(line_image):
     return blobby_image
 
 
-def blur_and_threshold(image, blur_size=(10, 20), threshold=220):
-    """
-    Blur the input image and apply thresholding.
-
-    Parameters:
-    - image: Input image (numpy array).
-    - blur_size: Size of the rectangle for averaging (tuple of two integers).
-
-    Returns:
-    - Resulting image after blurring and thresholding.
-    """
-    # Blur the image using a rectangle of specified size
-    blurred_image = cv2.blur(image, blur_size)
-
-    blurred_image[blurred_image < threshold] = 0
-
-    return blurred_image
-
-
-def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_contour=10000000):
+def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_contour=np.inf):
     """
     splits an image of a line of handwritten text into words based on contours found from blobbing the words.
     it orders them based on the english left-to-right reading with contours starting with lower x values added first
@@ -345,7 +291,7 @@ def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_
 
     # making sure the input image is greyscale
     if len(image.shape) == 2:
-        gray = image  # Image is already grayscale
+        gray = image.copy()  # Image is already grayscale
     else:
         # Convert the image to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -397,9 +343,34 @@ def extract_words_from_image(image_path, ruled):
 
     ordered_words = []
     for i in range(len(image_lines)):
-        words = word_splitter(image_lines[i])
+        # if line is array of size 0, it contains no words and is skipped as it breaks word_splitter
+        if image_lines[i].size == 0:
+            continue
+        words = word_splitter(image_lines[i], min_contour=1000)
         for j in range(len(words)):
             ordered_words.append(words[j])
-        # could append a symbol here to indicate that a newline has started, then use that to split transcriptions up
-        ordered_words.append(np.array([-999]))
+        # append a symbol to indicate that a newline has started, except for the last non-empty line
+        if i < len(image_lines) - 1:
+            ordered_words.append(np.array([-999]))
     return ordered_words
+
+
+def split_words_test(image):
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    height, width = image.shape[:2]
+
+    for i in range(width):
+        average_value = np.average(image[:, i])
+        image[:, i] = average_value
+    rate_of_change = np.zeros(width-1)
+
+    for j in range(width-1):
+        rate_of_change[j] = image[0][j] - image[0][j+1]
+
+    rate_of_change_2 = np.zeros(width - 2)
+    for k in range(width-2):
+        rate_of_change_2[k] = rate_of_change[k] - rate_of_change[k+1]
+
+    return image, rate_of_change, rate_of_change_2

@@ -31,18 +31,35 @@ class ImageToWordModel(OnnxInferenceModel):
 
 def main():
     from mltu.configs import BaseModelConfigs
-    configs = BaseModelConfigs.load("Models/03_handwriting_recognition/202401241905/configs.yaml")
-    model = ImageToWordModel(model_path=configs.model_path, char_list=configs.vocab)
-    words = image_processing.extract_words_from_image('sample_handwriting/image1.jpeg', True)
-    transcription = ""
-    for i in range(len(words)):
-        if np.all(words[i] == -999):
-            transcription += "\n"
+    # Model I trained with fewer epochs
+    configs1 = BaseModelConfigs.load("Models/03_handwriting_recognition/202401241905/configs.yaml")
+    model1 = ImageToWordModel(model_path=configs1.model_path, char_list=configs1.vocab)
+    words1 = image_processing.extract_words_from_image('sample_handwriting/common_a.jpeg', True)
+    transcription1 = ""
+    for i in range(len(words1)):
+        if np.all(words1[i] == -999):
+            transcription1 += "\n"
         else:
-            image = cv2.cvtColor(words[i], cv2.COLOR_GRAY2BGR)
-            prediction_text = model.predict(image)
-            transcription = transcription + prediction_text + " "
-    print(transcription)
+            image = cv2.cvtColor(words1[i], cv2.COLOR_GRAY2BGR)
+            prediction_text = model1.predict(image)
+            transcription1 = transcription1 + prediction_text + " "
+    print("my transcription \n")
+    print(transcription1)
+
+    # Pre-Trained model
+    configs2 = BaseModelConfigs.load("Models/03_handwriting_recognition/202301111911/configs.yaml")
+    model2 = ImageToWordModel(model_path=configs2.model_path, char_list=configs2.vocab)
+    words2 = image_processing.extract_words_from_image('sample_handwriting/common_a.jpeg', True)
+    transcription2 = ""
+    for i in range(len(words2)):
+        if np.all(words2[i] == -999):
+            transcription2 += "\n"
+        else:
+            image = cv2.cvtColor(words2[i], cv2.COLOR_GRAY2BGR)
+            prediction_text = model2.predict(image)
+            transcription2 = transcription2 + prediction_text + " "
+    print("\n\ntheir transcription\n")
+    print(transcription2)
 
 
 if __name__ == "__main__":

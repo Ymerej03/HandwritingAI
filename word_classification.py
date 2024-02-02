@@ -5,28 +5,36 @@ from PIL import Image, ImageTk  # Import the Image and ImageTk modules from the 
 
 
 class ImageLabeler:
-    # chatGPT did this whole function to speed up image classification so i could focus on the image processing and
-    # ai model training
-    def __init__(self, root, image_folder):
+    def __init__(self, root, image_folder, output_folder):
         self.root = root
         self.image_folder = image_folder
+        self.output_folder = output_folder
+        # Check if the output folder exists, and create it if not
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
         self.image_list = os.listdir(image_folder)
         self.current_index = 0
 
-        # Create UI components
         self.label_entry = tk.Entry(root)
         self.label_entry.pack()
         self.label_entry.bind("<Return>", lambda event: self.next_image())
-        self.label_entry.bind("<Delete>", lambda event: self.delete_current_image())
+
+        self.previous_button = tk.Button(root, text="Previous", command=self.previous_image)
+        self.previous_button.pack()
 
         self.next_button = tk.Button(root, text="Next", command=self.next_image)
         self.next_button.pack()
 
-        # Create a Label widget for displaying images
+        self.delete_button = tk.Button(root, text="Delete", command=self.delete_current_image)
+        self.delete_button.pack()
+        self.label_entry.bind("<Delete>", lambda event: self.delete_current_image())
+
+        self.skip_button = tk.Button(root, text="Skip", command=self.skip_image)
+        self.skip_button.pack()
+
         self.image_label = tk.Label(root)
         self.image_label.pack()
 
-        # Load and display the first image
         self.load_image()
 
     def load_image(self):
@@ -41,77 +49,85 @@ class ImageLabeler:
         image_rgb = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
         height, width, channels = image_rgb.shape
 
-        # Convert the image to a PhotoImage format
         image_pil = Image.fromarray(image_rgb)
         image_tk = ImageTk.PhotoImage(image=image_pil)
 
-        # Set the PhotoImage to the Label widget
         self.image_label.config(image=image_tk)
-        self.image_label.image = image_tk  # Keep a reference to avoid garbage collection
+        self.image_label.image = image_tk
 
         self.root.update_idletasks()
         self.root.update()
 
     def next_image(self, event=None):
-        # Get the label entered by the user
         label = self.label_entry.get()
 
-        # Check for delete command, this is not super necessary as there is a built in delete image process on delete key press
         if label.lower() == "/delete":
             self.delete_current_image()
         else:
-            # Rename the current image file
             if label:
                 current_image_path = os.path.join(self.image_folder, self.image_list[self.current_index])
                 new_image_name = f"{label}_{self.current_index + 1}.png"
-                new_image_path = os.path.join(self.image_folder, new_image_name)
+                new_image_path = os.path.join(self.output_folder, new_image_name)
 
-                # Handle existing file
                 i = 0
                 while os.path.exists(new_image_path):
                     i += 1
-                    new_image_path = os.path.join(self.image_folder, f"{label}_{self.current_index + i}.png")
+                    new_image_path = os.path.join(self.output_folder, f"{label}_{self.current_index + i}.png")
 
                 try:
                     os.rename(current_image_path, new_image_path)
                 except FileExistsError:
                     print(f"Error: File '{new_image_name}' already exists. Renaming to {new_image_path}")
 
-            # Move to the next image
             self.current_index += 1
-            self.label_entry.delete(0, tk.END)  # Clear the entry
+            self.label_entry.delete(0, tk.END)
 
-            # Check if all images are labeled
             if self.current_index < len(self.image_list):
                 self.load_image()
             else:
-                # Close the Tkinter window when all images are labeled
                 print("All images labeled!")
                 self.root.destroy()
 
     def delete_current_image(self):
-        # Delete the current image file
         current_image_path = os.path.join(self.image_folder, self.image_list[self.current_index])
         os.remove(current_image_path)
 
-        # Move to the next image
         self.current_index += 1
-        self.label_entry.delete(0, tk.END)  # Clear the entry
+        self.label_entry.delete(0, tk.END)
         self.load_image()
-        # Check if all images are labeled
+
         if self.current_index < len(self.image_list):
             self.load_image()
         else:
-            # Close the Tkinter window when all images are labeled
             print("All images labeled!")
             self.root.destroy()
+
+    def skip_image(self):
+        self.current_index += 1
+        self.label_entry.delete(0, tk.END)
+
+        if self.current_index < len(self.image_list):
+            self.load_image()
+        else:
+            print("All images labeled!")
+            self.root.destroy()
+
+    def previous_image(self):
+        if self.current_index != 0:
+            self.current_index -= 1
+        if self.current_index >= 0:
+            self.label_entry.delete(0, tk.END)
+            self.load_image()
+        else:
+            print("You are at the first image.")
 
 
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Image Labeler")
 
-    image_folder = "individual_numbers"
-    labeler = ImageLabeler(root, image_folder)
+    image_folder = "individual_words"
+    output_folder = "labelled_images"
+    labeler = ImageLabeler(root, image_folder, output_folder)
 
     root.mainloop()
