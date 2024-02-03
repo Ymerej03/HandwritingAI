@@ -21,8 +21,8 @@ import os
 # based on https://github.com/pythonlessons/mltu/tree/main/Tutorials/03_handwriting_recognition and
 # https://www.youtube.com/watch?v=WhRC31SlXzA same code ones more of a guide
 # the code here is almost certainly worse and probably over commented
-dataset_path = "jeremy_words_dataset/jeremy_words"
-dataset_words = "jeremy_words_dataset/jeremy_words.txt"
+dataset_path = f"jeremy_words_dataset{os.sep}jeremy_words"
+dataset_words = f"jeremy_words_dataset{os.sep}jeremy_words.txt"
 dataset = []
 vocab = set()
 max_len = 0

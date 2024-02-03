@@ -346,7 +346,7 @@ def extract_words_from_image(image_path, ruled):
         # if line is array of size 0, it contains no words and is skipped as it breaks word_splitter
         if image_lines[i].size == 0:
             continue
-        words = word_splitter(image_lines[i], min_contour=1000)
+        words = word_splitter(image_lines[i], min_contour=1250)
         for j in range(len(words)):
             ordered_words.append(words[j])
         # append a symbol to indicate that a newline has started, except for the last non-empty line
@@ -355,22 +355,25 @@ def extract_words_from_image(image_path, ruled):
     return ordered_words
 
 
-def split_words_test(image):
-    if len(image.shape) == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+def write_words_from_image(input_folder, output_folder):
+    folder_path = input_folder
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    if not os.path.exists(folder_path):
+        print(f"The folder {folder_path} does not exist.")
+    else:
+        for filename in os.listdir(folder_path):
+            if filename.endswith(('.jpeg', '.jpg', '.JPG', '.png')):
+                image_path = os.path.join(folder_path, filename)
+                words = extract_words_from_image(image_path, True)
+                for i in range(len(words)):
+                    if np.all(words[i] == -999):
+                        continue
+                    else:
+                        image = cv2.cvtColor(words[i], cv2.COLOR_GRAY2BGR)
 
-    height, width = image.shape[:2]
-
-    for i in range(width):
-        average_value = np.average(image[:, i])
-        image[:, i] = average_value
-    rate_of_change = np.zeros(width-1)
-
-    for j in range(width-1):
-        rate_of_change[j] = image[0][j] - image[0][j+1]
-
-    rate_of_change_2 = np.zeros(width - 2)
-    for k in range(width-2):
-        rate_of_change_2[k] = rate_of_change[k] - rate_of_change[k+1]
-
-    return image, rate_of_change, rate_of_change_2
+                        output_word_filename = f"{filename}_word_{i}.png"  # Adjust the file extension accordingly
+                        output_word_path = os.path.join(output_folder, output_word_filename)
+                        cv2.imwrite(output_word_path, image)
+            else:
+                print(f"Ignoring non-image file: {filename}")

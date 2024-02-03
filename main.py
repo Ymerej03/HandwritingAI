@@ -51,50 +51,17 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 # word list for my database https://www.ef.co.nz/english-resources/english-vocabulary/top-1000-words/
 
 def main():
-    folder_path = 'sample_handwriting'
-    output_folder = 'individual_words'
-    if not os.path.exists(folder_path):
-        print(f"The folder {folder_path} does not exist.")
-    else:
-        for filename in os.listdir(folder_path):
-            if filename.endswith(('.jpeg', '.jpg', '.png')):
-                image_path = os.path.join(folder_path, filename)
-                words = image_processing.extract_words_from_image(image_path, True)
-                for i in range(len(words)):
-                    if np.all(words[i] == -999):
-                        continue
-                    else:
-                        image = cv2.cvtColor(words[i], cv2.COLOR_GRAY2BGR)
-
-                        output_word_filename = f"{filename}_word_{i}.png"  # Adjust the file extension accordingly
-                        output_word_path = os.path.join(output_folder, output_word_filename)
-                        cv2.imwrite(output_word_path, image)
-            else:
-                print(f"Ignoring non-image file: {filename}")
+    image_processing.write_words_from_image('uni_sample_handwriting', 'words_to_label')
 
 
 if __name__ == "__main__":
-    # image = cv2.imread("horizontal_line/test_line_3.jpeg")
-    # image2, derivative, derivative2 = image_processing.split_words_test(image)
-    #
-    # fig, axes = plt.subplots(2, 2, figsize=(10, 5))
-    #
-    # # Plot the first image on the left subplot
-    # axes[0][0].imshow(image)
-    # axes[0][0].set_title('Image 1')
-    #
-    # # Plot the second image as a horizontal line plot on the right subplot
-    # axes[1][0].imshow(image2, cmap='gray')
-    # axes[1][0].set_title('Image 2')
-    #
-    # axes[0][1].plot(derivative, color='black')
-    # axes[0][1].set_title('rate of change')
-    #
-    # axes[1][1].plot(derivative2, color='black')
-    # axes[1][1].set_title('rate of change 2')
-    #
-    # plt.show()
-    items = os.listdir("labelled_images")
+
+    items2 = os.listdir("labelled_images_2")
+    items1 = os.listdir("labelled_images")
+    print("Labelled:")
+    print(len(items1) + len(items2))
+    items = os.listdir("words_to_label")
+    print("To Label:")
     print(len(items))
 
     # main()

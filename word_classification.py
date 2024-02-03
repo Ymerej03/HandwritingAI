@@ -123,11 +123,13 @@ class ImageLabeler:
 
 
 if __name__ == "__main__":
+
+    # when classifying do NOT include spaces
     root = tk.Tk()
     root.title("Image Labeler")
 
-    image_folder = "individual_words"
-    output_folder = "labelled_images"
+    image_folder = "words_to_label"
+    output_folder = "labelled_images_2"
     labeler = ImageLabeler(root, image_folder, output_folder)
 
     root.mainloop()
