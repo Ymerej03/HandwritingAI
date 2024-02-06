@@ -36,8 +36,7 @@ def main():
     print("Ground Truth:")
     print("The quick brown fox jumped over the \nlazy dog.\nSphinx of black quartz judge my vow.")
 
-    # Model trained on my handwriting exclusively ~1000 words
-    # caveat is that common_a was used in the training
+    # Model trained on my handwriting exclusively ~1000 words character error rate
     configs1 = BaseModelConfigs.load("Models/03_handwriting_recognition/my_handwriting_small/configs.yaml")
     model1 = ImageToWordModel(model_path=configs1.model_path, char_list=configs1.vocab)
     words1 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
@@ -49,11 +48,12 @@ def main():
             image = cv2.cvtColor(words1[i], cv2.COLOR_GRAY2BGR)
             prediction_text = model1.predict(image)
             transcription1 = transcription1 + prediction_text + " "
-    print("\n\nmy transcription \n")
+    print("\n\nmy transcription ~1000 word dataset, character error rate \n")
     print(transcription1)
 
-    # Pre-Trained model
-    configs2 = BaseModelConfigs.load("Models/03_handwriting_recognition/pre_trained_IAM/configs.yaml")
+    # Model trained on my handwriting exclusively ~5000 words character error rate
+
+    configs2 = BaseModelConfigs.load("Models/03_handwriting_recognition/my_handwriting_med_CER/configs.yaml")
     model2 = ImageToWordModel(model_path=configs2.model_path, char_list=configs2.vocab)
     words2 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
     transcription2 = ""
@@ -64,8 +64,39 @@ def main():
             image = cv2.cvtColor(words2[i], cv2.COLOR_GRAY2BGR)
             prediction_text = model2.predict(image)
             transcription2 = transcription2 + prediction_text + " "
-    print("\n\ntheir transcription\n")
+    print("\n\nmy transcription ~5000 word dataset, character error rate \n")
     print(transcription2)
+
+    # Model trained on my handwriting exclusively ~5000 words, word error rate
+
+    configs3 = BaseModelConfigs.load("Models/03_handwriting_recognition/my_handwriting_med_WER/configs.yaml")
+    model3 = ImageToWordModel(model_path=configs3.model_path, char_list=configs3.vocab)
+    words3 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
+    transcription3 = ""
+    for i in range(len(words3)):
+        if np.all(words3[i] == -999):
+            transcription3 += "\n"
+        else:
+            image = cv2.cvtColor(words3[i], cv2.COLOR_GRAY2BGR)
+            prediction_text = model3.predict(image)
+            transcription3 = transcription3 + prediction_text + " "
+    print("\n\nmy transcription ~5000 word dataset, word error rate \n")
+    print(transcription3)
+
+    # Pre-Trained model
+    configs4 = BaseModelConfigs.load("Models/03_handwriting_recognition/pre_trained_IAM/configs.yaml")
+    model4 = ImageToWordModel(model_path=configs4.model_path, char_list=configs4.vocab)
+    words4 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
+    transcription4 = ""
+    for i in range(len(words4)):
+        if np.all(words4[i] == -999):
+            transcription4 += "\n"
+        else:
+            image = cv2.cvtColor(words4[i], cv2.COLOR_GRAY2BGR)
+            prediction_text = model4.predict(image)
+            transcription4 = transcription4 + prediction_text + " "
+    print("\n\ntheir transcription\n")
+    print(transcription4)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,9 @@ from mltu.annotations.images import CVImage
 from mltu.tensorflow.dataProvider import DataProvider
 from mltu.tensorflow.losses import CTCloss
 from mltu.tensorflow.callbacks import Model2onnx, TrainLogger
+# character or word error rate
 from mltu.tensorflow.metrics import CWERMetric
+from mltu.tensorflow.metrics import WERMetric
 
 from model import train_model
 from configs import ModelConfigs
@@ -101,20 +103,32 @@ model = train_model(
     output_dim = len(configs.vocab),
 )
 
+# if using WER or CER (if using WER set word error to true
+word_error = True
+# can maybe use WERMetric instead (because i am guessing words not characters, needs an import)
 # Compile the model and print summary
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=configs.learning_rate),
-    loss=CTCloss(),
-    metrics=[CWERMetric(padding_token=len(configs.vocab))],
-)
+if word_error:
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=configs.learning_rate),
+        loss=CTCloss(),
+        metrics=[WERMetric(configs.vocab)],
+    )
+    monitoring = "val_WER"
+else:
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=configs.learning_rate),
+        loss=CTCloss(),
+        metrics=[CWERMetric(padding_token=len(configs.vocab))],
+    )
+    monitoring = "val_CER"
 model.summary(line_length=110)
 
 # Define callbacks
-earlystopper = EarlyStopping(monitor="val_CER", patience=20, verbose=1)
-checkpoint = ModelCheckpoint(f"{configs.model_path}/model.h5", monitor="val_CER", verbose=1, save_best_only=True, mode="min")
+earlystopper = EarlyStopping(monitor=monitoring, patience=20, verbose=1)
+checkpoint = ModelCheckpoint(f"{configs.model_path}/model.h5", monitor=monitoring, verbose=1, save_best_only=True, mode="min")
 trainLogger = TrainLogger(configs.model_path)
 tb_callback = TensorBoard(f"{configs.model_path}/logs", update_freq=1)
-reduceLROnPlat = ReduceLROnPlateau(monitor="val_CER", factor=0.9, min_delta=1e-10, patience=10, verbose=1, mode="auto")
+reduceLROnPlat = ReduceLROnPlateau(monitor=monitoring, factor=0.9, min_delta=1e-10, patience=10, verbose=1, mode="auto")
 model2onnx = Model2onnx(f"{configs.model_path}/model.h5")
 
 # Train the model

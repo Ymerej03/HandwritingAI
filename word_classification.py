@@ -129,7 +129,7 @@ if __name__ == "__main__":
     root.title("Image Labeler")
 
     image_folder = "words_to_label"
-    output_folder = "labelled_images_2"
+    output_folder = "labelled_images"
     labeler = ImageLabeler(root, image_folder, output_folder)
 
     root.mainloop()

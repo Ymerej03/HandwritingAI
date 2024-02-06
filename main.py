@@ -56,7 +56,7 @@ def main():
 
 if __name__ == "__main__":
 
-    items2 = os.listdir("labelled_images_2")
+    items2 = os.listdir("labelled_images")
     items1 = os.listdir("labelled_images")
     print("Labelled:")
     print(len(items1) + len(items2))
