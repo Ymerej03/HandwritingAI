@@ -182,57 +182,45 @@ def edge_detection(image):
 # plt.show()
 
 
-def mark_black_pixels_above_row(image, row_number, colour):
+def mark_black_pixels_above_row(image, row_number, colour=127):
     """
     Mark black pixels above the specified row with red color.
 
     Args:
     - image: The input image.
     - row_number: The row number from which to start traveling upward.
+    - colour: The colour value to mark the pixels (tuple of BGR values).
 
     Returns:
     - The image with black pixels above the specified row marked in red.
+    - The vertices of the polygon formed by marking the black pixels.
     """
-    # Iterate over columns in the current row
-    length, width = image.shape[:2]
+    # Initialize variables
+    height, width = image.shape[:2]
     up_y = row_number
     down_y = row_number
-    # initialising the vertices with the top row of the image
-    # top left, top right
-    vertices = [(0, 0), (width - 1, 0)]
+    vertices = []
+
+    # Iterate over columns in the current row
     for x in range(width):
         # Iterate upward from the specified row up to 125 pixels
-        for y in range(row_number, row_number-125, -1):
-            # If the pixel value is black (0), mark it as red
-            if all(image[y, x] == [0, 0, 0]):
+        for y in range(row_number, row_number - 125, -1):
+            if all(image[y, x] == [0, 0, 0]):  # If pixel value is black
                 up_y = y
-                # image[y][x] = (255, 0, 0)  # Change pixel color to red
                 break  # Stop iterating over rows once a non-black pixel is found
-            if y == row_number-124:
-                up_y = y
-                # image[y][x] = (255, 0, 0)
         # Iterate downward from the specified row up to 125 pixels
-        for y in range(row_number, row_number+125, 1):
-            # If the pixel value is black (0), mark it as red
-            if all(image[y, x] == [0, 0, 0]):
+        for y in range(row_number, row_number + 125, 1):
+            if all(image[y, x] == [0, 0, 0]):  # If pixel value is black
                 down_y = y
-                # image[y][x] = (255, 0, 0)  # Change pixel color to red
                 break  # Stop iterating over rows once a non-black pixel is found
-            if y == row_number+124:
-                down_y = y
-                # image[y][x] = (255, 0, 0)
 
+        # Compute average y-coordinate
         avg_y = (up_y + down_y) // 2
-        image[avg_y][x] = (colour, 0, 0)
+        image[avg_y][x] = colour  # Change pixel color
 
-        # vertices.append((avg_y, x))
-        # Append (x, avg_y) instead of (avg_y, x)
+        # Append vertex (x, avg_y) to the list of vertices
         vertices.append((x, avg_y))
-    # appending the last vertices corresponding to the last row of the image
-    # bottom left
-    vertices.append((0, length - 1))
-    # bottom right
-    vertices.append((width - 1, length - 1))
+
     return image, vertices
 
 
@@ -248,26 +236,19 @@ def curve_line_split(image):
     # Find local maxima
     peaks, _ = find_peaks(smoothed_projection)
 
-    # # draw peaks on image
-    # image_copy = cv2.cvtColor(image_copy, cv2.COLOR_GRAY2BGR)
-    # for row_number in peaks:
-    #     cv2.line(image_copy, (0, row_number), (image_copy.shape[1], row_number), (0, 255, 0), 3)
-    # plt.imshow(image_copy)
-    # plt.show()
+    list_of_vertices = [[(0, 0), (width - 1, 0)]]
 
-    colour_increment = 128 // len(peaks)
-    colour = 127
-    list_of_vertices = []
     for row in peaks:
-        image, vertices = mark_black_pixels_above_row(image, row, colour)
-        # cv2.line(image, (0, row), (image.shape[1], row), (0, 255, 0), 1)
+        _, vertices = mark_black_pixels_above_row(image, row)
         list_of_vertices.append(vertices)
-        colour += colour_increment
+    list_of_vertices.append([(height - 1, height - 1), (0, height - 1)])
 
     for i in range(len(list_of_vertices) - 1):
-        # Create a blank destination image with the same dimensions as the source image
-        destination_image = np.zeros_like(image_copy)
+        # Create a blank white background image with the same dimensions as the source image
+        white_background = np.ones_like(image_copy) * 255
+
         mask = np.zeros_like(image_copy)
+
         # the first list needs to be reversed so it can be read by fillpoly in ccw direction
         reversed_list_of_vertices = list_of_vertices[i].copy()
         reversed_list_of_vertices.reverse()
@@ -278,16 +259,33 @@ def curve_line_split(image):
 
         # Fill the region defined by the vertices with white (255)
         cv2.fillPoly(mask, [vertices_array], 255)
-        # Copy the non-rectangular region from the source image to the destination image using the mask
-        destination_image[mask == 255] = image_copy[mask == 255]
-        plt.imshow(destination_image)
-        plt.show()
-        breakpoint2 = 1
-    cv2.imwrite('curve_line_split_test.jpg', image)
-    # image = mark_black_pixels_above_row(image, 500)
-    plt.imshow(image)
-    plt.show()
 
+        # Copy the non-rectangular region from the source image to the destination image using the mask
+        white_background[mask == 255] = image_copy[mask == 255]
+        # white_background = cv2.cvtColor(white_background, cv2.COLOR_BGR2GRAY)
+
+        # Split the image into its color channels
+        line, _, _ = cv2.split(white_background)
+        height, width = line.shape[:2]
+
+        black = []
+        for y in range(height):
+            if 0 in line[y, :]:
+                black.append(y)
+
+        if black[0] - 15 >= 0:
+            min_y = black[0] - 15
+        else:
+            min_y = black[0]
+
+        if black[-1] + 15 <= height:
+            max_y = black[-1] + 15
+        else:
+            max_y = black[-1]
+
+        line = line[min_y:max_y, :]
+        plt.imshow(line, cmap='gray')
+        plt.show()
 
 
 image = preprocess_image('deprecated/uni_sample_handwriting/IMG_3524.JPG', True)
