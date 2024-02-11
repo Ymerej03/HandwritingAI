@@ -8,181 +8,7 @@ import image_processing
 from image_processing import increase_handwriting_size, preprocess_image
 
 
-def apply_canny_edge_detection(input_image_path, lower_threshold=95, upper_threshold=150):
-    # Read the input image
-    original_image = cv2.imread(input_image_path, cv2.IMREAD_GRAYSCALE)
-
-    # Denoising using non-local means denoising
-    denoised = cv2.fastNlMeansDenoising(original_image, None, h=5, templateWindowSize=10, searchWindowSize=25)
-    blurred_image = cv2.GaussianBlur(denoised, (7, 7), 0)
-
-    # Apply Canny edge detection
-    edges = cv2.Canny(blurred_image, lower_threshold, upper_threshold)
-    inv_edge = cv2.bitwise_not(edges)
-
-    eroded = cv2.erode(inv_edge, (7, 7), iterations=2)
-    eroded = increase_handwriting_size(eroded, 2, 2)
-
-    # fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-    # Display the original and the edges side by side using Matplotlib
-    # edges = cv2.bitwise_not(edges)
-    # axes[0].imshow(edges, cmap='gray')
-    # axes[0].set_title('Edges')
-
-    # eroded = cv2.bitwise_not(eroded)
-    # axes[1].imshow(eroded, cmap='gray')
-    # axes[1].set_title('Eroded')
-    # plt.show()
-
-    # Apply closing to the edges
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-    closing = cv2.morphologyEx(eroded, cv2.MORPH_OPEN, kernel)
-
-    words = increase_handwriting_size(inv_edge, 3, 1)
-
-    # Use HoughLinesP to detect lines in the image
-    lines = cv2.HoughLinesP(closing, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
-    closing_copy = np.copy(closing)
-    # Draw the detected lines on a black canvas
-    line_mask = np.zeros_like(closing)
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        cv2.line(closing_copy, (x1, y1), (x2, y2), (0, 0, 0), 2)
-
-    # Invert the line mask
-    line_mask_inv = cv2.bitwise_not(line_mask)
-
-    # Combine the original image with the inverted line mask
-    hor_lines_removed = cv2.bitwise_and(closing_copy, line_mask_inv)
-
-    # median blurring is a good final step to remove the horizontal lines however it doesnt work as the letters havent
-    # been filled in properly
-    median = cv2.medianBlur(hor_lines_removed, 5)
-
-    preprocessed = preprocess_image(input_image_path, True)
-
-    # fig, axes = plt.subplots(1, 5, figsize=(10, 5))
-    #
-    # # Display the original and the edges side by side using Matplotlib
-    # axes[0].imshow(original_image, cmap='gray')
-    # axes[0].set_title('Original Image')
-    #
-    # edges = cv2.bitwise_not(edges)
-    # axes[1].imshow(edges, cmap='gray')
-    # axes[1].set_title('Edges')
-    #
-    # closing = cv2.bitwise_not(closing)
-    # axes[2].imshow(closing, cmap='gray')
-    # axes[2].set_title('Closed Edges')
-    #
-    # median = cv2.bitwise_not(median)
-    # axes[3].imshow(median, cmap='gray')
-    # axes[3].set_title('Horizontal Lines Removed')
-    #
-    # # # black = find_black_regions(closing)
-    # # black = fill_small_black_regions(median, 100)
-    # axes[4].imshow(preprocessed, cmap='gray')
-    # axes[4].set_title('Preprocessed')
-    # plt.show()
-    #
-    # plt.imshow(edges, cmap='gray')
-    # plt.show()
-    # plt.imshow(preprocessed, cmap='gray')
-    # plt.show()
-
-    crop_edges = edges[:, 5:-5]
-    crop_edges_inv = cv2.bitwise_not(crop_edges)
-    # preprocessed_inv = cv2.bitwise_not(preprocessed)
-    mask = words[:, 5:-5]
-    master = cv2.bitwise_or(crop_edges_inv, preprocessed, mask=mask)
-
-    plt.imshow(crop_edges_inv, cmap='gray')
-    plt.show()
-    plt.imshow(preprocessed, cmap='gray')
-    plt.show()
-
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-    # Display the original and the edges side by side using Matplotlib
-    axes[0].imshow(preprocessed, cmap='gray')
-    axes[0].set_title('Preprocessed')
-
-    axes[1].imshow(master, cmap='gray')
-    axes[1].set_title('Processed or Edges')
-    plt.show()
-
-
-def edge_detection(image):
-    # if len(image.shape) == 3:  # Check if the image has three channels (e.g., BGR)
-    #     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # else:
-    #     image_gray = image.copy()  # If already grayscale, no need to convert
-
-    # converting to LAB color space
-    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-    l_channel, a, b = cv2.split(lab)
-
-    # Applying CLAHE to L-channel
-    # feel free to try different values for the limit and grid size:
-    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(16, 16))
-    cl = clahe.apply(l_channel)
-    # merge the CLAHE enhanced L-channel with the a and b channel
-    limage = cv2.merge((cl, a, b))
-
-    # Converting image from LAB Color model to BGR color spcae
-    enhanced_image = cv2.cvtColor(limage, cv2.COLOR_LAB2BGR)
-    # # Stacking the original image with the enhanced image
-    # result = np.hstack((image, enhanced_image))
-    # plt.imshow(result, cmap='gray')
-    # plt.show()
-    enhanced_image = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2GRAY)
-
-    # Threshold the grayscale image to create a binary image
-    _, binary_image = cv2.threshold(enhanced_image, 124, 255, cv2.THRESH_BINARY)
-    binary_image = image_processing.hor_line_removal(binary_image)
-    length, width = binary_image.shape
-    result = binary_image.copy()
-    for i in range(1, length):
-        for j in range(1, width):
-            # If the current pixel is black and either the pixel above or the pixel to the left is white,
-            # keep the pixel white. Otherwise, set it to black.
-            if binary_image[i][j] == 0 and (binary_image[i-1][j] == 255 or binary_image[i][j-1] == 255):
-                result[i][j] = 0
-            else:
-                result[i][j] = 255
-    # # this loop gets a crosshatch pattern because it is updating the array while checking the array
-    # for i in range(1, length):
-    #     for j in range(1, width):
-    #         # If the current pixel is black and either the pixel above or the pixel to the left is white,
-    #         # keep the pixel white. Otherwise, set it to black.
-    #         if binary_image[i][j] == 0 and (binary_image[i-1][j] == 255 or binary_image[i][j-1] == 255):
-    #             binary_image[i][j] = 0
-    #         else:
-    #             binary_image[i][j] = 255
-    return result
-
-# # Example usage:
-# input_image_path = 'deprecated/uni_sample_handwriting/IMG_3524.JPG'
-#
-#
-# # apply_canny_edge_detection(input_image_path)
-#
-# image = cv2.imread('deprecated/uni_sample_handwriting/IMG_3524.JPG')
-# image2 = edge_detection(image)
-#
-# fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-#
-# # Display the original and the edges side by side using Matplotlib
-# axes[0].imshow(image, cmap='gray')
-# axes[0].set_title('original')
-#
-# axes[1].imshow(image2, cmap='gray')
-# axes[1].set_title('edge')
-# plt.show()
-
-
-def mark_black_pixels_above_row(image, row_number, colour=127):
+def mark_black_pixels_above_row(image, row_number, resolution=10, colour=127):
     """
     Mark black pixels above the specified row with red color.
 
@@ -190,6 +16,7 @@ def mark_black_pixels_above_row(image, row_number, colour=127):
     - image: The input image.
     - row_number: The row number from which to start traveling upward.
     - colour: The colour value to mark the pixels (tuple of BGR values).
+    - resolution: how often to sample the points for vertices default is sampling every 10
 
     Returns:
     - The image with black pixels above the specified row marked in red.
@@ -200,6 +27,8 @@ def mark_black_pixels_above_row(image, row_number, colour=127):
     up_y = row_number
     down_y = row_number
     vertices = []
+
+    # need to find a way for it to include the descenders, on the bottom
 
     # Iterate over columns in the current row
     for x in range(width):
@@ -221,7 +50,17 @@ def mark_black_pixels_above_row(image, row_number, colour=127):
         # Append vertex (x, avg_y) to the list of vertices
         vertices.append((x, avg_y))
 
-    return image, vertices
+    # decreasing the "resolution" of the polygon to improve performance
+    new_vertices = []
+
+    for i in range(0, len(vertices), resolution):
+        new_vertices.append(vertices[i])
+
+    # each vertex is unique
+    if new_vertices[-1] != vertices[-1]:
+        new_vertices.append(vertices[-1])
+
+    return image, new_vertices
 
 
 def curve_line_split(image):
@@ -235,6 +74,8 @@ def curve_line_split(image):
 
     # Find local maxima
     peaks, _ = find_peaks(smoothed_projection)
+
+    list_of_lines = []
 
     list_of_vertices = [[(0, 0), (width - 1, 0)]]
 
@@ -268,6 +109,8 @@ def curve_line_split(image):
         line, _, _ = cv2.split(white_background)
         height, width = line.shape[:2]
 
+        # if there is any black on the line append it to the list of locations of black,
+        # by taking the first and last black locations we can crop the image (with some padding)
         black = []
         for y in range(height):
             if 0 in line[y, :]:
@@ -284,10 +127,96 @@ def curve_line_split(image):
             max_y = black[-1]
 
         line = line[min_y:max_y, :]
-        plt.imshow(line, cmap='gray')
-        plt.show()
+
+        # if the height of the line isn't large enough then there is no room for letters, so it is discarded
+        if max_y - min_y > 80:
+            list_of_lines.append(line)
+    return list_of_lines
 
 
-image = preprocess_image('deprecated/uni_sample_handwriting/IMG_3524.JPG', True)
-image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-curve_line_split(image)
+# image = preprocess_image('deprecated/uni_sample_handwriting/IMG_3504.JPG', True)
+# image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+# lines = image_processing.line_splitter(image)
+# curved_lines = curve_line_split(image)
+
+
+# new plan need to see where words are and where they fit within the lines
+# increase handwriting size of everything, everything between the lines is "tagged" as line x
+# then for each blob check where the majority of its pixels lie, they lie in line y, "tag" all pixels as line y
+
+
+def blob_line_split(input_image):
+    # might need to draw white lines over where peaks are detected after blobbing
+    image_copy = input_image.copy()
+    height, width = image_copy.shape[:2]
+    projection = np.zeros(height)
+    for i in range(height):
+        projection[i] = np.average(image_copy[i][:])
+
+    smoothed_projection = gaussian_filter1d(projection, sigma=16)
+
+    # Find local maxima
+    peaks = find_peaks(smoothed_projection)[0]
+
+    # inserting a "peak" at the top of the image
+    peaks = np.insert(peaks, 0, 0)
+    # inserting a "peak" at the bottom of the image
+    peaks = np.append(peaks, height - 1)
+    regions = []
+
+    image_mask = np.zeros_like(image_copy)
+
+    for i in range(len(peaks) - 1):
+        image_mask[peaks[i]:peaks[i + 1], :] = 255 // (len(peaks) - 1) * i
+        regions.append(255 // (len(peaks) - 1) * i)
+
+    blobbed = increase_handwriting_size(image_copy, 5, 2)
+
+    for peak in peaks:
+        blobbed[peak, :] = 255
+
+    contours = cv2.findContours(blobbed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+    for contour in contours:
+        # Step 3: Calculate centroid of each blob
+        M = cv2.moments(contour)
+        if M["m00"] != 0:
+            centroid_y = int(M["m01"] / M["m00"])
+        else:
+            continue  # Skip if centroid cannot be calculated
+        for i in range(len(peaks) - 1):
+            if peaks[i] < centroid_y < peaks[i+1]:
+                cv2.drawContours(image_mask, [contour], -1, color=regions[i], thickness=cv2.FILLED)
+
+    lines = []
+    # Iterate through each unique color in the layer mask
+    for color in regions:
+        # Create a new blank image to copy the regions
+        new_image = np.ones_like(image_copy) * 255
+
+        # Copy regions from the original images to the new image based on the mask
+        new_image[image_mask == color] = image_copy[image_mask == color]
+        lines.append(new_image)
+
+    return blobbed
+
+
+import time
+start = time.time()
+image = preprocess_image('deprecated/uni_sample_handwriting/IMG_3517.JPG', True)
+image2 = blob_line_split(image)
+stop = time.time()
+print(stop-start)
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+axes[0].imshow(image, cmap='gray')
+axes[1].imshow(image2, cmap='gray')
+plt.show()
+
+# for line in image2:
+#     plt.imshow(line, cmap='gray')
+#     plt.show()
+
+
+# https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=23a96b0bcde6434e7b02539207a3157fa6467fc5
+# use this instead
