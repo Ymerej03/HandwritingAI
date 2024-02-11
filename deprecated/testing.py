@@ -203,7 +203,7 @@ def blob_line_split(input_image):
 
 import time
 start = time.time()
-image = preprocess_image('deprecated/uni_sample_handwriting/IMG_3517.JPG', True)
+image = preprocess_image('uni_sample_handwriting/IMG_3517.JPG', True)
 image2 = blob_line_split(image)
 stop = time.time()
 print(stop-start)

@@ -1,12 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
-import os
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
-
-import image_processing
-from image_processing import preprocess_image
 
 
 def extract_outline(image):
@@ -63,7 +58,7 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
     # Radial search in the clockwise direction
     while True:
         for dr, dc in cw_directions:
-            # if iterated through all directions and havent found anything must have failed/got stuck on isolated pixel
+            # if iterated through all directions must have failed/got stuck on isolated pixel
             if dr == 9:
                 cw = 2
                 break
@@ -171,56 +166,96 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
 
 
 def droplet_line_splitter(image):
-    output_boundary = []
+    # increasing the text size to connect some ascenders and descenders to rest of letter and to remove jagged
+    # pieces which cause radial sweep to get stuck
+    structure = cv2.getStructuringElement(cv2.MORPH_RECT, [5, 5])
+    image_copy = cv2.erode(image, structure)
+    image_copy = cv2.erode(image_copy, structure)
+
+    # finding the peaks
     height, width = image.shape[:2]
     projection = np.zeros(height)
     for i in range(height):
         projection[i] = np.average(image[i][:])
-
     smoothed_projection = gaussian_filter1d(projection, sigma=16)
 
-    # outlined image takes a while, would probably do from passing the outlined image in instead of calculating it everytime
-    outlined_image = extract_outline(image)
+    # need the outline of the image so that radial sweep doesn't get stuck
+    outlined_image = extract_outline(image_copy)
 
     # Find local maxima
     peaks, _ = find_peaks(smoothed_projection)
-    # peaks = [1022]
+    list_of_lines = []
+    list_of_vertices = [[(0, 0), (0, width - 1)]]
+
+    # performing the water drop technique with radial search for each peak
     for peak in peaks:
         col = width
         row = peak
         line_boundary = []
         while col > 0:
             # if next pixel white draw line and move on
-            if image[row, col - 1] != 0:
-                image[row, col - 1] = 127
+            if image_copy[row, col - 1] != 0:
+                image_copy[row, col - 1] = 127
                 line_boundary.append((row, col-1))
                 col -= 1
-            elif image[row, col - 1] == 0:
+            elif image_copy[row, col - 1] == 0:
                 # if hit a black pixel radial sweep
-                row, col, boundary = radial_sweep(image, outlined_image, row, col - 1, peak)
+                row, col, boundary = radial_sweep(image_copy, outlined_image, row, col - 1, peak)
                 for pixel in boundary:
                     line_boundary.append(pixel)
                 for location in boundary:
-                    image[location[0], location[1]] = 127
-        output_boundary.append(line_boundary)
-    return image, output_boundary
+                    image_copy[location[0], location[1]] = 127
+        reversed_boundary = line_boundary.copy()
+        reversed_boundary.reverse()
+        list_of_vertices.append(reversed_boundary)
 
+    # adding the bottom corners
+    list_of_vertices.append([(height - 1, 0), (height - 1, height - 1)])
 
-image = preprocess_image('deprecated/uni_sample_handwriting/IMG_3514.JPG', True)
-# plt.imshow(image)
-# plt.show()
+    for i in range(len(list_of_vertices) - 1):
+        # Create a blank white background image with the same dimensions as the source image
+        white_background = np.ones_like(image) * 255
 
-structure = cv2.getStructuringElement(cv2.MORPH_RECT, [5, 5])
-image = cv2.erode(image, structure)
-image = cv2.erode(image, structure)
-# plt.imshow(image)
-# plt.show()
+        mask = np.zeros_like(image)
 
-image, boundary = droplet_line_splitter(image)
-white = np.ones_like(image) * 255
-for i in range(len(boundary)):
-    for location in boundary[i]:
-        white[location[0], location[1]] = 0
-plt.imshow(white)
-plt.show()
+        # the first list needs to be reversed, so it can be read by cv2.fillpoly
+        reversed_list_of_vertices = list_of_vertices[i+1].copy()
+        reversed_list_of_vertices.reverse()
+        vertices = list_of_vertices[i] + reversed_list_of_vertices
 
+        # each pair need to be reversed to be of form (col, row)
+        vertices = [(t[1], t[0]) for t in vertices]
+
+        # Convert the list of vertices to a NumPy array
+        vertices_array = np.array([vertices], dtype=np.int32)
+
+        # Fill the region defined by the vertices with white (255)
+        cv2.fillPoly(mask, [vertices_array], 255)
+
+        # Copy the non-rectangular region from the source image to the destination image using the mask
+        white_background[mask == 255] = image[mask == 255]
+
+        # if there is any black on the line append it to the list of locations of black,
+        # by taking the first and last black locations we can crop the image (with some padding)
+        black = []
+        for y in range(height):
+            if 0 in white_background[y, :]:
+                black.append(y)
+        if len(black) > 0:
+            if black[0] - 10 >= 0:
+                min_y = black[0] - 10
+            else:
+                min_y = black[0]
+
+            if black[-1] + 10 <= height:
+                max_y = black[-1] + 10
+            else:
+                max_y = black[-1]
+
+            line = white_background[min_y:max_y, :]
+
+            # if the height of the line isn't large enough then there is no room for letters, so it is discarded
+            if max_y - min_y > 80:
+                list_of_lines.append(line)
+        # list_of_lines.append(white_background)
+    return list_of_lines

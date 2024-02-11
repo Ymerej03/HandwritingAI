@@ -4,6 +4,7 @@ import cv2
 import os
 from scipy.ndimage import gaussian_filter1d, gaussian_filter, gaussian_laplace
 from scipy.signal import find_peaks
+import pathfinding
 
 
 def hor_line_removal(image):
@@ -42,6 +43,13 @@ def hor_line_removal(image):
     hor_lines_removed = cv2.bitwise_and(grayed, line_mask_inv)
 
     return hor_lines_removed
+
+
+def remove_border(image):
+    # also to do is remove the border and the leftover line segments, current idea is to use the contours that have
+    # have already been found and are above a certain size and set them to white, OR connected component analysis and
+    # if it is large enough set it to white
+    pass
 
 
 def preprocess_image(path, ruled):
@@ -101,6 +109,10 @@ def preprocess_image(path, ruled):
     # leaves a weird black 5 pixel border so cropping it out (only cropping the left and right borders)
     # this is where it breaks the line splitter function, crop misses the last line, no crop includes it
     crop_image = median[:, 5:-5]
+
+    # also to do is remove the border and the leftover line segments, current idea is to use the contours that have
+    # have already been found and are above a certain size and set them to white, OR connected component analysis and
+    # if it is large enough set it to white
 
     return crop_image
 
@@ -339,7 +351,7 @@ def extract_words_from_image(image_path, ruled):
     image = preprocess_image(image_path, ruled)
     # splits the images into lines, image_lines is a list of those lines where image_lines[0] is the topmost line
     # image_lines[1] is the line below etc
-    image_lines = line_splitter(image)
+    image_lines = pathfinding.droplet_line_splitter(image)
 
     ordered_words = []
     for i in range(len(image_lines)):

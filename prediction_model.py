@@ -5,8 +5,11 @@ import numpy as np
 from mltu.inferenceModel import OnnxInferenceModel
 from mltu.utils.text_utils import ctc_decoder, get_cer
 
+
+
 import matplotlib.pyplot as plt
 import os
+
 # from https://github.com/pythonlessons/mltu/tree/main/Tutorials/03_handwriting_recognition and
 # https://www.youtube.com/watch?v=WhRC31SlXzA same code ones more of a guide
 import image_processing
@@ -55,7 +58,7 @@ def main():
 
     configs2 = BaseModelConfigs.load("Models/03_handwriting_recognition/my_handwriting_med_CER/configs.yaml")
     model2 = ImageToWordModel(model_path=configs2.model_path, char_list=configs2.vocab)
-    words2 = image_processing.extract_words_from_image('IMG_3559.jpg', True)
+    words2 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
     transcription2 = ""
     for i in range(len(words2)):
         if np.all(words2[i] == -999):
@@ -71,7 +74,7 @@ def main():
 
     configs3 = BaseModelConfigs.load("Models/03_handwriting_recognition/my_handwriting_med_WER/configs.yaml")
     model3 = ImageToWordModel(model_path=configs3.model_path, char_list=configs3.vocab)
-    words3 = image_processing.extract_words_from_image('IMG_3559.jpg', True)
+    words3 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
     transcription3 = ""
     for i in range(len(words3)):
         if np.all(words3[i] == -999):
@@ -86,7 +89,7 @@ def main():
     # Pre-Trained model
     configs4 = BaseModelConfigs.load("Models/03_handwriting_recognition/pre_trained_IAM/configs.yaml")
     model4 = ImageToWordModel(model_path=configs4.model_path, char_list=configs4.vocab)
-    words4 = image_processing.extract_words_from_image('IMG_3559.jpg', True)
+    words4 = image_processing.extract_words_from_image('quick_brown_fox.jpg', True)
     transcription4 = ""
     for i in range(len(words4)):
         if np.all(words4[i] == -999):
