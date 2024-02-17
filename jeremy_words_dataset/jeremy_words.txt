@@ -1,3 +1,5 @@
+# z01 and z02 are samples from before line and word splitting was changed, so they are poorer quality
+# might want to redo them to improve performance.
 z01-000-00-00 ok 99 99 99 99 99 aa ability
 z01-000-00-01 ok 99 99 99 99 99 aa able
 z01-000-00-02 ok 99 99 99 99 99 aa about

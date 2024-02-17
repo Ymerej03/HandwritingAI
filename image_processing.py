@@ -45,13 +45,6 @@ def hor_line_removal(image):
     return hor_lines_removed
 
 
-def remove_border(image):
-    # also to do is remove the border and the leftover line segments, current idea is to use the contours that have
-    # have already been found and are above a certain size and set them to white, OR connected component analysis and
-    # if it is large enough set it to white
-    pass
-
-
 def preprocess_image(path, ruled):
     """
     preprocess_image() takes a path to the location of an image containing handwriting and processes it to be black and
@@ -66,7 +59,7 @@ def preprocess_image(path, ruled):
     image = cv2.imread(path)
     grayed = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # Denoising using non-local means denoising
+    # Denoising using non-local means denoising, denoising takes a little while
     denoised = cv2.fastNlMeansDenoising(grayed, None, h=5, templateWindowSize=10, searchWindowSize=25)
     blurred = cv2.GaussianBlur(denoised, (0, 0), sigmaX=25, sigmaY=25)
 
@@ -76,7 +69,7 @@ def preprocess_image(path, ruled):
 
     # sets the image to be in black and white only using Otsu's algorithm/method
     # based on maximising the variance between classes of pixels
-    thresh = cv2.threshold(divided, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    _, thresh = cv2.threshold(divided, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     if ruled:
         image = hor_line_removal(thresh)
@@ -103,16 +96,14 @@ def preprocess_image(path, ruled):
     inverted_contour_mask = cv2.bitwise_not(contour_image)
     result = cv2.bitwise_and(morph, morph, mask=inverted_contour_mask)
 
+    # floodfill to remove outline, this might accidentally remove some words/letters but i think its worth it
+    cv2.floodFill(result, None, (0, 0), 255)
+
     # applying a median blur to get rid of all the thin lines/artifacts that get leftover
     median = cv2.medianBlur(result, 7)
 
-    # leaves a weird black 5 pixel border so cropping it out (only cropping the left and right borders)
-    # this is where it breaks the line splitter function, crop misses the last line, no crop includes it
+    # crop image is still used even though border has been removed because i dont want to debug line splitter
     crop_image = median[:, 5:-5]
-
-    # also to do is remove the border and the leftover line segments, current idea is to use the contours that have
-    # have already been found and are above a certain size and set them to white, OR connected component analysis and
-    # if it is large enough set it to white
 
     return crop_image
 
@@ -307,7 +298,8 @@ def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_
     else:
         # Convert the image to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blob = increase_handwriting_size(gray, 6, 6)
+    blob = increase_handwriting_size(gray, 9, 5)
+    # blob = increase_handwriting_size(gray, 6, 6)
     # Find contours, detects white/light colours hence the need for inversion
     contours = cv2.findContours(blob, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0]
     if write:
@@ -326,7 +318,8 @@ def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_
                     # Save the individual word image
                     output_path = os.path.join(output_folder, f'{image}_word_{i}.png')
                     if word_image.any():
-                        cv2.imwrite(output_path, word_image)
+                        if np.sum(word_image <= 10) > 250:
+                            cv2.imwrite(output_path, word_image)
     else:
         word_image = []
         # Extract individual words and sort them based on the leftmost point
@@ -335,7 +328,9 @@ def word_splitter(image, output_folder=None, write=False, min_contour=1000, max_
 
             # Filter contours that are in specified area range and append to the list of words
             if max_contour > cv2.contourArea(contour) > min_contour:
-                word_image.append(image[y:y + h, x:x + w])
+                # filtering out images that don't have enough black and are therefore just dots/noise
+                if np.sum(image[y:y + h, x:x + w] <= 10) > 250:
+                    word_image.append(image[y:y + h, x:x + w])
 
         return word_image
 
@@ -351,7 +346,7 @@ def extract_words_from_image(image_path, ruled):
     image = preprocess_image(image_path, ruled)
     # splits the images into lines, image_lines is a list of those lines where image_lines[0] is the topmost line
     # image_lines[1] is the line below etc
-    image_lines = pathfinding.droplet_line_splitter(image)
+    image_lines = pathfinding.droplet_line_splitter(image, False)
 
     ordered_words = []
     for i in range(len(image_lines)):
@@ -359,8 +354,8 @@ def extract_words_from_image(image_path, ruled):
         if image_lines[i].size == 0:
             continue
         words = word_splitter(image_lines[i], min_contour=1250)
-        for j in range(len(words)):
-            ordered_words.append(words[j])
+        for word in words:
+            ordered_words.append(word)
         # append a symbol to indicate that a newline has started, except for the last non-empty line
         if i < len(image_lines) - 1:
             ordered_words.append(np.array([-999]))
@@ -389,3 +384,25 @@ def write_words_from_image(input_folder, output_folder):
                         cv2.imwrite(output_word_path, image)
             else:
                 print(f"Ignoring non-image file: {filename}")
+
+
+import time
+start = time.time()
+write_words_from_image('old_school', 'words_to_label')
+end = time.time()
+print(end-start)
+
+# split 82 images in 1680.3123326301575 seconds, ~20s per image
+# split 97 images in
+
+
+# image = preprocess_image('test/quick_brown_fox.jpg', True)
+# pathfinding.droplet_line_splitter(image, True)
+# # blob = increase_handwriting_size(image, 6, 6)
+# # blob2 = increase_handwriting_size(image, 10, 4)
+# # fig, axes = plt.subplots(1, 3)
+# # axes[0].imshow(image, cmap='gray')
+# # axes[1].imshow(blob, cmap='gray')
+# # axes[2].imshow(blob2, cmap='gray')
+# # plt.show()
+

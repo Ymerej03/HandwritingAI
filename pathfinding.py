@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import cv2
 from scipy.ndimage import gaussian_filter1d
@@ -17,7 +19,7 @@ def extract_outline(image):
                 for dr, dc in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                     r_neighbor, c_neighbor = row + dr, col + dc
                     # Check if the neighboring pixel is within bounds and white
-                    if 0 <= r_neighbor < height and 0 <= c_neighbor < width and image[r_neighbor, c_neighbor] != 0:
+                    if (0 <= r_neighbor < height) and (0 <= c_neighbor < width) and image[r_neighbor, c_neighbor] != 0:
                         # Copy the black pixel to the result image
                         result_image[row, col] = 0
                         break  # Stop checking other directions if a white neighbor is found
@@ -63,13 +65,18 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
                 cw = 2
                 break
             r_new, c_new = row + dr, col + dc  # Move in the radial direction
-            if 0 <= r_new < height and 0 <= c_new < width and cw_image[r_new, c_new] == 0:
-                # Move to the next black pixel
-                row, col = r_new, c_new
-                cw_image[row, col] = 127  # Mark the pixel as gray
-                cw_boundary.append((row, col))  # Add the boundary pixel to the list
-                cw_iterations += 1
-                break
+            # add check to see if pixel is on the boundary (4 cardinal directions NOT all black) and then a check to
+            # see if it is already on the list, potentially as a new variable to check
+            #
+            if (r_new, c_new) not in cw_boundary:
+                # if it is on the list it has been visited before and should be ignored
+                if (0 <= r_new < height) and (0 <= c_new < width) and cw_image[r_new, c_new] == 0:
+                    # Move to the next black pixel
+                    row, col = r_new, c_new
+                    # cw_image[row, col] = 127  # Mark the pixel as gray
+                    cw_boundary.append((row, col))  # Add the boundary pixel to the list
+                    cw_iterations += 1
+                    break
         if (row, col) == (start_row, start_col):
             # if stuck on isolated pixel have failed
             cw = 2
@@ -83,7 +90,7 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
             cw = 1
             break
         elif cw_iterations > max_iterations:
-            # if takes too many iterations has failed
+            # if it takes too many iterations has failed
             cw = 2
             break
         elif ccw == 1 and cw_iterations > len(ccw_boundary):
@@ -100,18 +107,19 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
     # Radial search in the counter-clockwise direction
     while True:
         for dr, dc in ccw_directions:
-            # if iterated through all directions and havent found anything must have failed/got stuck on isolated pixel
+            # if iterated through all directions and haven't found anything must have failed/got stuck on isolated pixel
             if dr == 9:
                 ccw = 2
                 break
             ccw_r_new, ccw_c_new = ccw_row + dr, ccw_col + dc  # Move in the radial direction
-            if 0 <= ccw_r_new < height and 0 <= ccw_c_new < width and ccw_image[ccw_r_new, ccw_c_new] == 0:
-                # Move to the next black pixel
-                ccw_row, ccw_col = ccw_r_new, ccw_c_new
-                ccw_image[ccw_row, ccw_col] = 100  # Mark the pixel as gray
-                ccw_boundary.append((ccw_row, ccw_col))  # Add the boundary pixel to the list
-                ccw_iterations += 1
-                break
+            if (ccw_r_new, ccw_c_new) not in ccw_boundary:
+                if (0 <= ccw_r_new < height) and (0 <= ccw_c_new < width) and ccw_image[ccw_r_new, ccw_c_new] == 0:
+                    # Move to the next black pixel
+                    ccw_row, ccw_col = ccw_r_new, ccw_c_new
+                    # ccw_image[ccw_row, ccw_col] = 100  # Mark the pixel as gray
+                    ccw_boundary.append((ccw_row, ccw_col))  # Add the boundary pixel to the list
+                    ccw_iterations += 1
+                    break
         if (ccw_row, ccw_col) == (start_row, start_col):
             # if stuck on isolated pixel have failed
             ccw = 2
@@ -125,7 +133,7 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
             ccw = 1
             break
         elif ccw_iterations > max_iterations:
-            # if takes too many iterations has failed
+            # if it takes too many iterations has failed
             ccw = 2
             break
         elif cw == 1 and ccw_iterations > len(cw_boundary):
@@ -165,7 +173,7 @@ def radial_sweep(image, outlined_image, start_row, start_col, peak):
         print("Error")
 
 
-def droplet_line_splitter(image):
+def droplet_line_splitter(image, write):
     # increasing the text size to connect some ascenders and descenders to rest of letter and to remove jagged
     # pieces which cause radial sweep to get stuck
     structure = cv2.getStructuringElement(cv2.MORPH_RECT, [5, 5])
@@ -210,7 +218,7 @@ def droplet_line_splitter(image):
         list_of_vertices.append(reversed_boundary)
 
     # adding the bottom corners
-    list_of_vertices.append([(height - 1, 0), (height - 1, height - 1)])
+    list_of_vertices.append([(height - 1, 0), (height - 1, width - 1)])
 
     for i in range(len(list_of_vertices) - 1):
         # Create a blank white background image with the same dimensions as the source image
@@ -258,4 +266,22 @@ def droplet_line_splitter(image):
             if max_y - min_y > 80:
                 list_of_lines.append(line)
         # list_of_lines.append(white_background)
+    if write:
+        # Create and save horizontal lines
+        output_folder = 'horizontal_line'
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        file_index = 0
+        for i in range(len(list_of_lines)):
+
+            base_filename = f'line_{i + 1}.jpg'
+            output_path = os.path.join(output_folder, base_filename)
+
+            # Check if the file already exists
+            while os.path.exists(output_path):
+                file_index += 1
+                base_filename = f'line_{file_index + 1}.jpg'
+                output_path = os.path.join(output_folder, base_filename)
+
+            cv2.imwrite(output_path, list_of_lines[i])
     return list_of_lines

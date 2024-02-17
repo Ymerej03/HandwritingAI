@@ -4,7 +4,7 @@ except: pass
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from mltu.preprocessors import ImageReader
-from mltu.transformers import ImageResizer, LabelIndexer, LabelPadding, ImageShowCV2
+from mltu.transformers import ImageResizer, LabelIndexer, LabelPadding
 from mltu.augmentors import RandomBrightness, RandomRotate, RandomErodeDilate, RandomSharpen
 from mltu.annotations.images import CVImage
 

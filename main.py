@@ -56,11 +56,10 @@ def main():
 
 if __name__ == "__main__":
 
-    items2 = os.listdir("labelled_images")
-    items1 = os.listdir("labelled_images")
-    print("Labelled:")
-    print(len(items1) + len(items2))
-    items = os.listdir("words_to_label")
+    # items = os.listdir("labelled_images_geog")
+    # print("Labelled:")
+    # print(len(items))
+    items = os.listdir("old_school")
     print("To Label:")
     print(len(items))
 

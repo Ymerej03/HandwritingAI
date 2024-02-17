@@ -29,7 +29,7 @@ for i, image_name in enumerate(os.listdir(input_folder)):
     a = output_number[:3]
     b = output_number[3:5]
     c = output_number[5:]
-    top_folder = "z02"
+    top_folder = "x03"
     new_image_name = f"{top_folder}{os.sep}{top_folder}-{a}{os.sep}{top_folder}-{a}-{b}-{c}.png"
     output_file_path = os.path.join(output_folder, new_image_name)
 
