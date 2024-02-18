@@ -1,11 +1,9 @@
 import image_processing
 import cv2
-import pytesseract
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
 # The goal of the project is to be able to take images as input (in my handwriting) and for a machine learning model
 # to be able to "read" what is written and convert this to a text file.
 # The model (maybe separate) should also be able to take a text file as input and produce an image of handwritten words
@@ -51,16 +49,19 @@ pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesserac
 # word list for my database https://www.ef.co.nz/english-resources/english-vocabulary/top-1000-words/
 
 def main():
-    image_processing.write_words_from_image('uni_sample_handwriting', 'words_to_label')
+    # image_processing.write_words_from_image('uni_sample_handwriting', 'words_to_label')
+    pass
 
 
 if __name__ == "__main__":
 
-    # items = os.listdir("labelled_images_geog")
-    # print("Labelled:")
+    items = os.listdir("labelled_images_school")
+    items1 = os.listdir("labelled_images_geog")
+    items2 = os.listdir("labelled_images")
+    print("Labelled:")
     # print(len(items))
-    items = os.listdir("old_school")
+    print(len(items)+len(items1)+len(items2))
+    items3 = os.listdir("words_to_label")
     print("To Label:")
-    print(len(items))
-
-    # main()
+    print(len(items3))
+    # started 18th with 9399 to label

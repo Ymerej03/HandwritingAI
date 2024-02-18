@@ -32,9 +32,11 @@ def hor_line_removal(image):
 
     # Draw the detected lines on a black canvas
     line_mask = np.zeros_like(grayed)
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        cv2.line(grayed, (x1, y1), (x2, y2), (255, 255, 255), 2)
+    # if lines is None then no lines were detected and the whole image should be kept
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(grayed, (x1, y1), (x2, y2), (255, 255, 255), 2)
 
     # Invert the line mask
     line_mask_inv = cv2.bitwise_not(line_mask)
@@ -386,23 +388,11 @@ def write_words_from_image(input_folder, output_folder):
                 print(f"Ignoring non-image file: {filename}")
 
 
-import time
-start = time.time()
-write_words_from_image('old_school', 'words_to_label')
-end = time.time()
-print(end-start)
+# import time
+# start = time.time()
+# write_words_from_image('labelled_images_school', 'words_to_label')
+# end = time.time()
+# print(end-start)
 
 # split 82 images in 1680.3123326301575 seconds, ~20s per image
-# split 97 images in
-
-
-# image = preprocess_image('test/quick_brown_fox.jpg', True)
-# pathfinding.droplet_line_splitter(image, True)
-# # blob = increase_handwriting_size(image, 6, 6)
-# # blob2 = increase_handwriting_size(image, 10, 4)
-# # fig, axes = plt.subplots(1, 3)
-# # axes[0].imshow(image, cmap='gray')
-# # axes[1].imshow(blob, cmap='gray')
-# # axes[2].imshow(blob2, cmap='gray')
-# # plt.show()
-
+# split 97 images in 2180.1419427394867 seconds, ~24s per image

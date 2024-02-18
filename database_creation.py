@@ -9,7 +9,7 @@ import os
 # ie z01-000-00-00 ok 99 99 99 99 99 aa "transcription"
 # the transcription is obtained from the original name of the image split on the _
 
-input_folder = "labelled_images"
+input_folder = "labelled_images_school"
 output_folder = "jeremy_words_dataset/jeremy_words"
 output_text_folder = output_folder.split("/")[0]
 
@@ -29,7 +29,7 @@ for i, image_name in enumerate(os.listdir(input_folder)):
     a = output_number[:3]
     b = output_number[3:5]
     c = output_number[5:]
-    top_folder = "x03"
+    top_folder = "n03"
     new_image_name = f"{top_folder}{os.sep}{top_folder}-{a}{os.sep}{top_folder}-{a}-{b}-{c}.png"
     output_file_path = os.path.join(output_folder, new_image_name)
 

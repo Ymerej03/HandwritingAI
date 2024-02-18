@@ -1,0 +1,9 @@
+batch_size: 16
+height: 32
+learning_rate: 0.0005
+max_text_length: 28
+model_path: Trained_Models/03_handwriting_recognition/my_handwriting_med_WER
+train_epochs: 1000
+train_workers: 20
+vocab: 0Naiz5ebCQ1&S436g)EU-IcnOw29Ymx$,TvtMZl8.yJhpDLfWAj(d7BGHVP+qrsFRoku
+width: 128
