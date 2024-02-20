@@ -1,6 +1,9 @@
 import tensorflow as tf
-try: [tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices("GPU")]
-except: pass
+
+try:
+    [tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices("GPU")]
+except:
+    pass
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from mltu.preprocessors import ImageReader
@@ -23,8 +26,8 @@ import os
 # based on https://github.com/pythonlessons/mltu/tree/main/Tutorials/03_handwriting_recognition and
 # https://www.youtube.com/watch?v=WhRC31SlXzA same code ones more of a guide
 # the code here is almost certainly worse and probably over commented
-dataset_path = f"jeremy_words_dataset{os.sep}jeremy_words"
-dataset_words = f"jeremy_words_dataset{os.sep}jeremy_words.txt"
+dataset_path = f"C:{os.sep}Users{os.sep}jball{os.sep}PycharmProjects{os.sep}handwritingAI{os.sep}jeremy_words_dataset{os.sep}jeremy_words"
+dataset_words = f"C:{os.sep}Users{os.sep}jball{os.sep}PycharmProjects{os.sep}handwritingAI{os.sep}jeremy_words_dataset{os.sep}jeremy_words.txt"
 dataset = []
 vocab = set()
 max_len = 0
@@ -41,7 +44,7 @@ with open(dataset_words, "r") as text:
         if line.startswith("#"):
             continue
         split_line = line.split(" ")
-
+        # not used in my code as none of the transcriptions are errors
         if split_line[1] == "err":
             continue
         # first item split on - is top level folder
@@ -83,11 +86,11 @@ data_provider = DataProvider(
         ImageResizer(configs.width, configs.height, keep_aspect_ratio=False),
         LabelIndexer(configs.vocab),
         LabelPadding(max_word_length=configs.max_text_length, padding_value=len(configs.vocab)),
-        ],
+    ],
 )
 
 # Split the dataset into training and validation sets
-train_data_provider, val_data_provider = data_provider.split(split = 0.9)
+train_data_provider, val_data_provider = data_provider.split(split=0.9)
 
 # Augment training data with random brightness, rotation and erode/dilate
 train_data_provider.augmentors = [
@@ -95,12 +98,12 @@ train_data_provider.augmentors = [
     RandomErodeDilate(),
     RandomSharpen(),
     RandomRotate(angle=10),
-    ]
+]
 
 # Creating TensorFlow model architecture
 model = train_model(
-    input_dim = (configs.height, configs.width, 3),
-    output_dim = len(configs.vocab),
+    input_dim=(configs.height, configs.width, 3),
+    output_dim=len(configs.vocab),
 )
 
 # if using WER or CER (if using WER set word error to true
@@ -124,11 +127,12 @@ else:
 model.summary(line_length=110)
 
 # Define callbacks
-earlystopper = EarlyStopping(monitor=monitoring, patience=20, verbose=1)
-checkpoint = ModelCheckpoint(f"{configs.model_path}/model.h5", monitor=monitoring, verbose=1, save_best_only=True, mode="min")
+earlystopper = EarlyStopping(monitor=monitoring, patience=25, verbose=1)
+checkpoint = ModelCheckpoint(f"{configs.model_path}/model.h5", monitor=monitoring, verbose=1, save_best_only=True,
+                             mode="min")
 trainLogger = TrainLogger(configs.model_path)
 tb_callback = TensorBoard(f"{configs.model_path}/logs", update_freq=1)
-reduceLROnPlat = ReduceLROnPlateau(monitor=monitoring, factor=0.9, min_delta=1e-10, patience=10, verbose=1, mode="auto")
+reduceLROnPlat = ReduceLROnPlateau(monitor=monitoring, factor=0.9, min_delta=1e-10, patience=15, verbose=1, mode="auto")
 model2onnx = Model2onnx(f"{configs.model_path}/model.h5")
 
 # Train the model

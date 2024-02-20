@@ -1,7 +1,10 @@
 import cv2
 import os
 import tkinter as tk
-from PIL import Image, ImageTk  # Import the Image and ImageTk modules from the PIL library
+from PIL import Image, ImageTk
+# ChatGPT did almost all the code here, I debugged it a bit to get it to work and added some functionality with going
+# to the next and previous images as well as pressing 'del' key to delete. Not really going to comment any more as
+# this was not the focus of my project, this just greatly sped up the labelling.
 
 
 class ImageLabeler:

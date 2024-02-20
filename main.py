@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import prediction_model
 
 # The goal of the project is to be able to take images as input (in my handwriting) and for a machine learning model
 # to be able to "read" what is written and convert this to a text file.
