@@ -550,12 +550,3 @@ def write_words_from_image(input_folder, output_folder):
             else:
                 print(f"Ignoring non-image file: {filename}")
 
-
-# import time
-# start = time.time()
-# write_words_from_image('labelled_images_school', 'words_to_label')
-# end = time.time()
-# print(end-start)
-
-# split 82 images in 1680.3123326301575 seconds, ~20s per image
-# split 97 images in 2180.1419427394867 seconds, ~24s per image

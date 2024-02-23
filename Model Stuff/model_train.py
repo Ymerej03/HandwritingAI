@@ -26,6 +26,9 @@ import os
 # based on https://github.com/pythonlessons/mltu/tree/main/Tutorials/03_handwriting_recognition and
 # https://www.youtube.com/watch?v=WhRC31SlXzA same code ones more of a guide
 # the code here is almost certainly worse and probably over commented
+
+# dataset_path is the path to the folder containing the images
+# dataset_words is the path to the text file containing the transcription of the images
 dataset_path = f"C:{os.sep}Users{os.sep}jball{os.sep}PycharmProjects{os.sep}handwritingAI{os.sep}jeremy_words_dataset{os.sep}jeremy_words"
 dataset_words = f"C:{os.sep}Users{os.sep}jball{os.sep}PycharmProjects{os.sep}handwritingAI{os.sep}jeremy_words_dataset{os.sep}jeremy_words.txt"
 dataset = []
@@ -36,7 +39,7 @@ max_len = 0
 with open(dataset_words, "r") as text:
     line = "not blank"
     while line != "":
-        # reads the line first so that when it continues it doesnt get stuck in an infinite loop
+        # reads the line first so that when it continues it doesn't get stuck in an infinite loop
         line = text.readline()
         if line == "":
             continue
