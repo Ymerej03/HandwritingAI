@@ -1,0 +1,9 @@
+batch_size: 16
+height: 32
+learning_rate: 0.0005
+max_text_length: 34
+model_path: Trained_Models/03_handwriting_recognition/my_handwriting_large_WER
+train_epochs: 1000
+train_workers: 20
+vocab: cPtQvp.NWfb$VGw4(0F9yih5H-z)IJZYRU=esLaBrTjAm36oq7!12lk%u+D'nM,dgxCE8S#@K&O
+width: 128
